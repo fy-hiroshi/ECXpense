@@ -1,0 +1,4 @@
+- Import Database by going to PHPMyAdmin
+- press import button on the ribbon 
+- press browse and select database/sql file
+- scroll down and press import
