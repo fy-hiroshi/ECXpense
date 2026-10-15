@@ -75,6 +75,11 @@ body {
   box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
 }
 
+/* Hide the old Add Expense link from the sidebar across all pages */
+.sidebar nav a[href="add-expense.php"] {
+  display: none !important;
+}
+
 /* Main Content Area */
 .main {
   flex: 1;
@@ -385,28 +390,34 @@ textarea {
 
 /* Custom Modal */
 .modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(15, 23, 42, 0.4);
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  background: rgba(15, 23, 42, 0.45);
   backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  z-index: 9999 !important;
+  padding: 16px;
+  box-sizing: border-box;
 }
 .modal-box {
   background: white;
-  padding: 40px;
+  padding: 36px;
   border-radius: 20px;
-  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.15);
   max-width: 420px;
-  width: 90%;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
   text-align: center;
-  animation: modalFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   border: 1px solid #e2e8f0;
+  margin: auto;
 }
 .modal-box h2 {
   margin: 0 0 12px;
@@ -448,17 +459,6 @@ textarea {
   box-shadow: 0 6px 16px rgba(239, 68, 68, 0.3);
 }
 
-@keyframes modalFadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(20px) scale(0.95);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
@@ -484,19 +484,36 @@ textarea {
   cursor: pointer;
   padding: 0;
   position: relative;
-  z-index: 1002; /* Keeps hamburger on top of the sliding menu */
+  z-index: 1002;
 }
 .menu-toggle:active {
   transform: scale(0.9);
 }
 
-/* Sidebar Notification Icon */
+/* Sidebar Bottom Layout (Logout & Notifications) */
 .sidebar-bottom {
-  margin-top: auto; /* Pushes the icon to the very bottom of the sidebar */
-  padding-top: 15px;
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  margin-top: auto;
   display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+.logout-icon-btn {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
   justify-content: center;
+  transition: all 0.2s ease;
+}
+.logout-icon-btn:hover {
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.1);
 }
 .notif-icon-btn {
   background: transparent;
@@ -531,7 +548,7 @@ textarea {
   align-items: center;
   justify-content: center;
   padding: 0 4px;
-  border: 2px solid #0f172a; /* Matches sidebar background so it looks like a cutout */
+  border: 2px solid #0f172a;
 }
 
 /* Role Badges */
@@ -559,8 +576,6 @@ textarea {
 }
 
 /* --- Shared Record Page Fixes --- */
-
-/* Fix Tab Buttons */
 .tabs {
   display: flex;
   gap: 0;
@@ -568,15 +583,12 @@ textarea {
   margin-bottom: 24px;
   padding: 0 10px;
 }
-
-/* Ensure Tab Content is hidden globally unless active */
 .tab-content {
   display: none !important;
 }
 .tab-content.active {
   display: block !important;
 }
-
 .tab-btn {
   background: transparent !important;
   border: none !important;
@@ -587,7 +599,7 @@ textarea {
   font-weight: 600;
   color: #64748b;
   cursor: pointer;
-  margin-bottom: -2px; /* Pulls active border down over the line */
+  margin-bottom: -2px;
   transition: all 0.2s;
   border-radius: 0;
   box-shadow: none !important;
@@ -604,7 +616,9 @@ textarea {
 /* Grid Forms for Tabs */
 .inline-form {
   display: grid;
-  grid-template-columns: 2fr 1fr 1.5fr 1.5fr auto;
+  grid-template-columns:
+    minmax(0, 1.5fr) minmax(0, 1fr) minmax(0, 2.5fr)
+    minmax(0, 1.2fr) auto !important;
   gap: 16px;
   align-items: end;
   margin-bottom: 24px;
@@ -612,16 +626,26 @@ textarea {
   padding: 20px;
   border-radius: 12px;
   border: 1px solid #e2e8f0;
+  width: 100%;
 }
 .inline-form.invite-form {
-  grid-template-columns: 2.5fr 1fr auto;
+  grid-template-columns: 2.5fr 1fr auto !important;
 }
 .inline-form.rename-form {
-  grid-template-columns: 1fr auto;
+  grid-template-columns: 1fr auto !important;
   background: transparent;
   border: none;
   padding: 0;
   margin-bottom: 35px;
+}
+.inline-form label {
+  min-width: 0;
+}
+.inline-form input,
+.inline-form select {
+  min-width: 0 !important;
+  width: 100%;
+  text-overflow: ellipsis;
 }
 
 /* Danger Zone Cards */
@@ -652,49 +676,124 @@ textarea {
   flex: 1;
 }
 
-/* --- Sidebar Bottom Layout (Logout & Notifications) --- */
-.sidebar nav {
-  display: flex;
-  flex-direction: column;
-  flex: 1; /* Allows the nav to stretch and fill the sidebar */
+/* --- Brand Accent & Pop Enhancements (#0f172a & #397ff5) --- */
+.brand span {
+  color: #397ff5 !important;
 }
-
-.sidebar-bottom {
-  margin-top: auto; /* Pushes the container to the absolute bottom */
-  display: flex;
-  justify-content: space-between; /* Spaces Logout left and Notif right */
-  align-items: center;
-  padding-top: 16px;
-  border-top: 1px solid rgba(255, 255, 255, 0.05); /* Subtle dark-mode separator */
+.topbar h1 {
+  color: #0f172a;
+  letter-spacing: -0.5px;
 }
-
-/* Modern Logout Button Styling */
-.logout-icon-btn {
-  background: transparent;
-  border: none;
-  color: #94a3b8;
-  cursor: pointer;
-  padding: 8px;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.sidebar {
+  background: #0f172a !important;
+  border-right: 1px solid rgba(57, 127, 245, 0.15);
+}
+.sidebar nav a:hover:not(.active) {
+  color: #ffffff;
+  background: rgba(57, 127, 245, 0.12);
+  transform: translateX(4px);
+}
+.sidebar nav a.active {
+  background: #397ff5 !important;
+  color: #ffffff !important;
+  box-shadow: 0 6px 20px rgba(57, 127, 245, 0.4) !important;
+}
+.notif-icon-btn:hover {
+  color: #397ff5 !important;
+  background: rgba(57, 127, 245, 0.12);
+}
+.card {
+  border: 1px solid #e2e8f0;
+  border-top: 4px solid #397ff5 !important;
+  transition:
+    transform 0.25s ease,
+    box-shadow 0.25s ease,
+    border-color 0.25s ease;
+}
+.card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 24px -6px rgba(57, 127, 245, 0.18) !important;
+  border-color: rgba(57, 127, 245, 0.4);
+}
+.card .label {
+  color: #397ff5 !important;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+}
+.card .value {
+  color: #0f172a !important;
+}
+.cards .card:first-child {
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%) !important;
+  border: 1px solid #1e293b !important;
+  border-top: 4px solid #397ff5 !important;
+}
+.cards .card:first-child .label {
+  color: #60a5fa !important;
+}
+.cards .card:first-child .value {
+  color: #ffffff !important;
+}
+.btn:not(.btn-secondary):not(.btn-danger):not(.btn-success) {
+  background: #397ff5 !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 14px rgba(57, 127, 245, 0.35);
   transition: all 0.2s ease;
 }
-
-.logout-icon-btn:hover {
-  color: #ef4444; /* Modern red highlight on hover */
-  background: rgba(239, 68, 68, 0.1);
+.btn:not(.btn-secondary):not(.btn-danger):not(.btn-success):hover {
+  background: #2563eb !important;
+  box-shadow: 0 6px 20px rgba(57, 127, 245, 0.5);
+  transform: translateY(-2px);
 }
-
-@media (max-width: 768px) {
-  .inline-form,
-  .inline-form.invite-form,
-  .inline-form.rename-form,
-  .danger-grid {
-    grid-template-columns: 1fr;
-    align-items: stretch;
-  }
+.category-toggle-btn {
+  color: #397ff5 !important;
+  border-color: rgba(57, 127, 245, 0.3) !important;
+  background: rgba(57, 127, 245, 0.05) !important;
+}
+.category-toggle-btn:hover {
+  background: #397ff5 !important;
+  color: #ffffff !important;
+  border-color: #397ff5 !important;
+  box-shadow: 0 4px 12px rgba(57, 127, 245, 0.3);
+}
+input:focus,
+select:focus,
+textarea:focus {
+  outline: none !important;
+  border-color: #397ff5 !important;
+  box-shadow: 0 0 0 4px rgba(57, 127, 245, 0.15) !important;
+}
+table th {
+  background: #f8fafc;
+  color: #0f172a !important;
+  border-bottom: 2px solid #397ff5 !important;
+  font-weight: 700;
+}
+table tr:hover td {
+  background: rgba(57, 127, 245, 0.04);
+}
+.collab-row:hover {
+  border-color: #397ff5;
+  box-shadow: 0 4px 12px rgba(57, 127, 245, 0.1);
+}
+.tab-btn:hover {
+  color: #397ff5;
+}
+.tab-btn.active {
+  color: #397ff5 !important;
+  border-bottom: 3px solid #397ff5 !important;
+  font-weight: 700;
+}
+.role-owner {
+  background: rgba(57, 127, 245, 0.15) !important;
+  color: #397ff5 !important;
+  border: 1px solid rgba(57, 127, 245, 0.3);
+}
+.modal-box {
+  border-top: 5px solid #397ff5;
+}
+.modal-box h2 {
+  color: #0f172a;
 }
 
 /* --- Collaborators List --- */
@@ -735,13 +834,10 @@ input[type="file"] {
   font-size: 14px;
   transition: all 0.25s ease;
 }
-
 input[type="file"]:hover {
   border-color: #3b82f6;
   background: #f8fafc;
 }
-
-/* Styles the actual "Browse" button inside the input */
 input[type="file"]::file-selector-button {
   background: #f1f5f9;
   color: #334155;
@@ -755,17 +851,13 @@ input[type="file"]::file-selector-button {
   transition: all 0.2s ease;
   font-family: inherit;
 }
-
 input[type="file"]::file-selector-button:hover {
   background: #e2e8f0;
   color: #0f172a;
 }
-
-/* Fix spacing specifically for the Scan Receipt layout */
 #scanBtn {
   margin-top: 20px;
 }
-
 #status {
   margin-top: 16px;
   margin-bottom: 20px;
@@ -775,7 +867,7 @@ input[type="file"]::file-selector-button:hover {
 #notifModal .modal-box {
   max-width: 500px;
   padding: 32px;
-  text-align: left; /* Aligns list items cleanly */
+  text-align: left;
 }
 #notifModal h2 {
   text-align: center;
@@ -792,7 +884,7 @@ input[type="file"]::file-selector-button:hover {
   border-radius: 12px;
   margin-bottom: 12px;
   box-shadow: 0 4px 15px rgba(15, 23, 42, 0.03);
-  flex-direction: row; /* Forces side-by-side layout */
+  flex-direction: row;
 }
 .notif-item > div:first-child {
   display: flex;
@@ -811,10 +903,8 @@ input[type="file"]::file-selector-button:hover {
 .notif-actions {
   display: flex;
   gap: 10px;
-  flex-shrink: 0; /* Prevents buttons from getting squished */
+  flex-shrink: 0;
 }
-
-/* Modern Pill Buttons for Notifications */
 .notif-actions .btn {
   padding: 8px 18px !important;
   font-size: 13px !important;
@@ -825,7 +915,7 @@ input[type="file"]::file-selector-button:hover {
   letter-spacing: 0.3px;
 }
 .notif-actions .btn-success {
-  background: #10b981 !important; /* Modern Emerald */
+  background: #10b981 !important;
   color: white !important;
 }
 .notif-actions .btn-success:hover {
@@ -833,7 +923,7 @@ input[type="file"]::file-selector-button:hover {
   transform: translateY(-1px) !important;
 }
 .notif-actions .btn-danger {
-  background: #fef2f2 !important; /* Soft Ghost Red */
+  background: #fef2f2 !important;
   color: #dc2626 !important;
   border: 1px solid #fecaca !important;
 }
@@ -841,8 +931,6 @@ input[type="file"]::file-selector-button:hover {
   background: #fee2e2 !important;
   transform: translateY(-1px) !important;
 }
-
-/* Modernize the Close Button */
 #notifModal .btn-secondary {
   margin-top: 24px !important;
   background: #f8fafc !important;
@@ -858,28 +946,12 @@ input[type="file"]::file-selector-button:hover {
   color: #0f172a !important;
 }
 
-/* Responsive behavior for very small phones */
-@media (max-width: 480px) {
-  .notif-item {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 16px;
-  }
-  .notif-actions {
-    width: 100%;
-  }
-  .notif-actions .btn {
-    flex: 1;
-    text-align: center;
-  }
-}
-
 /* --- Category Toggle Button Fixes --- */
 .category-wrapper {
   display: flex;
   gap: 8px;
   margin-top: 6px;
-  align-items: stretch; /* Forces button to perfectly match the dropdown's height */
+  align-items: stretch;
 }
 .category-wrapper select {
   flex: 1;
@@ -898,39 +970,13 @@ input[type="file"]::file-selector-button:hover {
   color: #64748b;
   transition: all 0.2s ease;
 }
-.category-toggle-btn:hover {
-  background: #e2e8f0;
-  color: #0f172a;
-  border-color: #94a3b8;
-}
-
-/* Smart Grid that prevents long category names from pushing inputs out of bounds */
-.inline-form {
-  grid-template-columns:
-    minmax(0, 1.5fr) minmax(0, 1fr) minmax(0, 2.5fr)
-    minmax(0, 1.2fr) auto !important;
-  width: 100%;
-}
-
-.inline-form label {
-  min-width: 0; /* Allows the column container to shrink */
-}
-
-.inline-form input,
-.inline-form select {
-  min-width: 0 !important; /* Forces inputs to stay inside their columns */
-  width: 100%;
-  text-overflow: ellipsis; /* Adds "..." if the category name is too long to fit */
-}
 
 /* --- Login & Register Page Makeover --- */
 body.auth-layout {
-  /* Set the abstract image as a full-screen, fixed background */
   background: url("../images/bg.jpg") no-repeat center center fixed;
   background-size: cover;
-  background-color: #0f172a; /* Fallback color while the image loads */
-  backdrop-filter: blur(1.5px) brightness(0.85); /* Slight blur and darkening for contrast */
-
+  background-color: #0f172a;
+  backdrop-filter: blur(1.5px) brightness(0.85);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -938,21 +984,16 @@ body.auth-layout {
   margin: 0;
   padding: 20px;
 }
-
 .auth-card {
   background: #ffffff;
   width: 100%;
   max-width: 400px;
   padding: 40px 32px;
   border-radius: 16px;
-  /* Heavy shadow to separate the card from the dark background */
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
   text-align: center;
-  /* Subtle entrance animation */
   animation: popIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
-
-/* Overrides any default text colors to ensure readability on the white card */
 .auth-card h1 {
   color: #0f172a;
   margin-bottom: 8px;
@@ -984,14 +1025,16 @@ body.auth-layout {
   }
   100% {
     opacity: 1;
-    transform: translateY(0);
+    transform: none;
   }
 }
 
-/* We leave the sidebar completely static so it acts as a seamless visual anchor */
-
-/* Only the main content glides in, masking the page reload */
-.main {
+.topbar,
+.cards,
+.tabs,
+.grid,
+.panel > :not(.modal-overlay):not(.form-panel),
+.form-panel > :not(.modal-overlay) {
   animation: fadeSlideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
@@ -1033,15 +1076,12 @@ body.auth-layout {
   }
 }
 
-/* Plays automatically when JavaScript sets display from 'none' to 'flex' */
 .modal-overlay {
   animation: modalFadeIn 0.25s ease-out forwards;
 }
 .modal-box {
   animation: modalBoxIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
-
-/* Plays only when our Magic Interceptor adds the '.closing' class */
 .modal-overlay.closing {
   animation: modalFadeOut 0.25s ease-in forwards;
 }
@@ -1049,26 +1089,27 @@ body.auth-layout {
   animation: modalBoxOut 0.25s ease-in forwards;
 }
 
-/* Responsive Adjustments */
+/* --- Responsive Adjustments --- */
 @media (max-width: 900px) {
-  .grid {
-    grid-template-columns: 1fr;
+  .grid,
+  .inline-form,
+  .inline-form.invite-form,
+  .inline-form.rename-form {
+    grid-template-columns: 1fr !important;
   }
 }
 
 @media (max-width: 768px) {
-  /* Force remove any lingering browser white space */
   html,
   body {
     margin: 0;
     padding: 0;
   }
   .layout {
+    display: flex;
     flex-direction: column;
-    display: block;
+    min-height: 100vh;
   }
-
-  /* The dark top bar */
   .sidebar {
     width: 100%;
     padding: 18px 24px;
@@ -1081,19 +1122,16 @@ body.auth-layout {
     z-index: 1000;
     height: auto;
   }
-
   .mobile-header {
     display: flex;
     align-items: center;
     gap: 16px;
-    position: relative; /* New: Establishes stacking order */
-    z-index: 1002; /* New: Keeps the whole header above the sliding menu */
+    position: relative;
+    z-index: 1002;
   }
-
   .menu-toggle {
     display: flex;
   }
-
   .brand-container .tagline {
     margin: 2px 0 0;
     font-size: 12px;
@@ -1101,31 +1139,27 @@ body.auth-layout {
   .brand-container .brand {
     font-size: 24px;
   }
-
-  /* Sliding Sidebar for Navigation Links */
   .sidebar nav {
     position: fixed;
     top: 0;
-    left: -300px; /* Hide completely off-screen to the left */
+    left: -300px;
     width: 260px;
     height: 100vh;
     background: #0f172a;
     display: flex;
     flex-direction: column;
     margin: 0;
-    padding: 85px 24px 24px; /* Push links down so they don't cover the header */
+    padding: 85px 24px 24px;
     gap: 8px;
     transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    z-index: 1001; /* Slide in slightly under the hamburger icon */
+    z-index: 1001;
     box-shadow: 10px 0 30px rgba(0, 0, 0, 0.5);
   }
-
-  /* Slide it in when hamburger is clicked */
   .sidebar.active nav {
     left: 0;
   }
-
   .main {
+    flex: 1;
     padding: 24px;
   }
   .topbar {
@@ -1134,14 +1168,13 @@ body.auth-layout {
     gap: 16px;
     margin-bottom: 24px;
   }
-  .cards {
+  .cards,
+  .danger-grid {
     grid-template-columns: 1fr;
   }
   .auth-card {
     padding: 40px 24px;
   }
-
-  /* Shared Records & Notifications */
   .mt-auto {
     margin-top: auto;
   }
@@ -1154,138 +1187,32 @@ body.auth-layout {
     font-weight: bold;
     margin-left: auto;
   }
-  .notif-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 12px;
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    margin-bottom: 10px;
-  }
-  .notif-actions {
-    display: flex;
-    gap: 8px;
-  }
-  .notif-actions .btn {
-    padding: 6px 12px;
-    font-size: 13px;
-  }
   .btn-success {
     background: #16a34a;
   }
   .btn-success:hover {
     background: #15803d;
   }
-
-  /* Tabs for Shared Record View */
   .tabs {
     display: flex;
     gap: 10px;
     border-bottom: 2px solid #e2e8f0;
     margin-bottom: 20px;
+    overflow-x: auto;
   }
-  .tab-btn {
-    background: none;
-    border: none;
-    padding: 10px 20px;
-    font-size: 15px;
-    font-weight: 600;
-    color: #64748b;
-    cursor: pointer;
-    border-bottom: 2px solid transparent;
-    margin-bottom: -2px;
-  }
-  .tab-btn.active {
-    color: #2563eb;
-    border-bottom-color: #2563eb;
-  }
-  .tab-content {
-    display: none;
-  }
-  .tab-content.active {
-    display: block;
-  }
-  .collab-list {
-    display: flex;
+}
+
+@media (max-width: 480px) {
+  .notif-item {
     flex-direction: column;
-    gap: 12px;
+    align-items: flex-start;
+    gap: 16px;
   }
-  .collab-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 16px;
-    border: 1px solid #e2e8f0;
-    border-radius: 12px;
-    background: white;
+  .notif-actions {
+    width: 100%;
   }
-  .collab-info strong {
-    font-size: 16px;
-    color: #0f172a;
+  .notif-actions .btn {
+    flex: 1;
+    text-align: center;
   }
-  .collab-info span {
-    font-size: 13px;
-    color: #64748b;
-    background: #f1f5f9;
-    padding: 3px 8px;
-    border-radius: 6px;
-    margin-left: 8px;
-    text-transform: capitalize;
-  }
-}
-
-/* --- Modal Entrance & Exit Animations --- */
-@keyframes modalFadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-@keyframes modalBoxIn {
-  from {
-    transform: scale(0.95) translateY(15px);
-    opacity: 0;
-  }
-  to {
-    transform: scale(1) translateY(0);
-    opacity: 1;
-  }
-}
-@keyframes modalFadeOut {
-  from {
-    opacity: 1;
-  }
-  to {
-    opacity: 0;
-  }
-}
-@keyframes modalBoxOut {
-  from {
-    transform: scale(1) translateY(0);
-    opacity: 1;
-  }
-  to {
-    transform: scale(0.95) translateY(15px);
-    opacity: 0;
-  }
-}
-
-/* Plays automatically when JavaScript sets display from 'none' to 'flex' */
-.modal-overlay {
-  animation: modalFadeIn 0.25s ease-out forwards;
-}
-.modal-box {
-  animation: modalBoxIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
-
-/* Plays only when our Magic Interceptor adds the '.closing' class */
-.modal-overlay.closing {
-  animation: modalFadeOut 0.25s ease-in forwards;
-}
-.modal-overlay.closing .modal-box {
-  animation: modalBoxOut 0.25s ease-in forwards;
 }

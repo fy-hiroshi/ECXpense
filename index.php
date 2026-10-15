@@ -7,6 +7,21 @@ if (!isset($_SESSION['user_id'])) {
 
 require_once "config/database.php";
 $user_id = $_SESSION['user_id'];
+// Handle Adding a New Expense from the Modal
+if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['action']) && $_POST['action'] === 'add_expense') {
+    $title = trim($_POST['title'] ?? '');
+    $amount = (float)($_POST['amount'] ?? 0);
+    $category = $_POST['category'] ?? 'Other';
+    $date = $_POST['expense_date'] ?? date('Y-m-d');
+
+    if ($title !== "" && $amount > 0) {
+        $ins = $conn->prepare("INSERT INTO expenses (user_id, title, amount, category, expense_date) VALUES (?, ?, ?, ?, ?)");
+        $ins->bind_param("isdss", $user_id, $title, $amount, $category, $date);
+        $ins->execute();
+        header("Location: expenses.php");
+        exit;
+    }
+}
 
 // Get total summary for personal user expenses ONLY (excluding shared)
 $stmt1 = $conn->prepare("SELECT COALESCE(SUM(amount),0) AS total, COUNT(*) AS count FROM expenses WHERE user_id = ? AND shared_record_id IS NULL");
@@ -62,10 +77,9 @@ $pending_count = count($invitations) + count($activities);
             </div>
             <nav>
                 <a href="index.php">Dashboard</a>
-                <a href="shared-records.php">Shared Records</a>
-                <a href="add-expense.php">Add Expense</a>
                 <a href="scan-receipt.php">Scan Receipt</a>
                 <a href="expenses.php">Expense Records</a>
+                <a href="shared-records.php">Shared Records</a>
                 
                 
                 <!-- Mail Notification Icon at Bottom -->
@@ -97,7 +111,7 @@ $pending_count = count($invitations) + count($activities);
                     <h1>Dashboard</h1>
                     <p>Track your personal expenses.</p>
                 </div>
-                <a class="btn" href="add-expense.php">+ Add Expense</a>
+                <button type="button" class="btn" onclick="document.getElementById('addExpenseModal').style.display='flex'">+ Add Expense</button>
             </header>
             
             <section class="cards">
@@ -256,6 +270,77 @@ $pending_count = count($invitations) + count($activities);
                 })
                 .catch(err => console.error('Polling error:', err));
         }, 10000); // Quietly checks the database every 10 seconds
+    </script>
+    <!-- Add Expense Modal -->
+    <div id="addExpenseModal" class="modal-overlay" style="display: none;">
+        <div class="modal-box" style="max-width: 480px; width: 100%; text-align: left;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2 style="margin: 0;">Add Expense</h2>
+                <button type="button" onclick="document.getElementById('addExpenseModal').style.display='none'" style="background: transparent; border: none; font-size: 24px; line-height: 1; color: #94a3b8; cursor: pointer; padding: 0;">&times;</button>
+            </div>
+
+            <form method="post" style="display: flex; flex-direction: column; gap: 16px;">
+                <input type="hidden" name="action" value="add_expense">
+                
+                <label>Expense Title
+                    <input type="text" name="title" required placeholder="e.g. Lunch">
+                </label>
+
+                <label>Amount
+                    <input type="number" step="0.01" name="amount" required placeholder="0.00">
+                </label>
+
+                <label>Category
+                    <div class="category-wrapper">
+                        <select name="category" id="categorySelect">
+                            <option>Housing & Living</option>
+                            <option>Utilities</option>
+                            <option>Food and Dining</option>
+                            <option>Transportation</option>
+                            <option>Health & Wellness</option>
+                            <option>Personal Care & Household</option>
+                            <option>Entertainment & Lifestyle</option>
+                            <option>Financial & Obligations</option>
+                            <option>Other</option>
+                        </select>
+                        <button type="button" id="categoryToggleBtn" onclick="toggleCategoryType()" class="category-toggle-btn" title="Switch to Business Categories">
+                            <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+                        </button>
+                    </div>
+                </label>
+
+                <label>Date
+                    <input type="date" name="expense_date" value="<?= date('Y-m-d') ?>" required>
+                </label>
+
+                <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 8px;">
+                    <button type="submit" class="btn" style="width: 100%; margin: 0;">Save Expense</button>
+                    <button type="button" class="btn btn-secondary" style="width: 100%; margin: 0;" onclick="document.getElementById('addExpenseModal').style.display='none'">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const personalCategories = ["Housing & Living", "Utilities", "Food and Dining", "Transportation", "Health & Wellness", "Personal Care & Household", "Entertainment & Lifestyle", "Financial & Obligations", "Other"];
+        const businessCategories = ["Operations & Office", "Cost of Goods Sold (COGS) / Inventory", "Marketing & Advertising", "Payroll & Contractor Fees", "Travel & Client Entertainment", "Professional Services & Legal", "Business Insurance & Taxes", "Other"];
+        
+        const iconHouse = `<svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>`;
+        const iconSuitcase = `<svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>`;
+        
+        let isBusiness = false;
+
+        function toggleCategoryType() {
+            isBusiness = !isBusiness;
+            const select = document.getElementById('categorySelect');
+            const btn = document.getElementById('categoryToggleBtn');
+            
+            const options = isBusiness ? businessCategories : personalCategories;
+            select.innerHTML = options.map(opt => `<option>${opt}</option>`).join('');
+            
+            btn.innerHTML = isBusiness ? iconSuitcase : iconHouse;
+            btn.title = isBusiness ? "Switch to Personal Categories" : "Switch to Business Categories";
+        }
     </script>
     <script src="js/global-ui.js"></script>
 </body>

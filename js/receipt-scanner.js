@@ -5,6 +5,11 @@ document.addEventListener("DOMContentLoaded", function () {
   const rawText = document.getElementById("ocrText");
   const parsedForm = document.getElementById("parsedExpenseForm");
 
+  // Move the modal to root body so parent transforms never trap or misalign it
+  if (parsedForm) {
+    document.body.appendChild(parsedForm);
+  }
+
   if (scanBtn && fileInput) {
     scanBtn.addEventListener("click", function () {
       const file = fileInput.files[0];
@@ -17,7 +22,7 @@ document.addEventListener("DOMContentLoaded", function () {
       statusDiv.innerHTML =
         '<span style="color: #2563eb; font-weight: bold;">Analyzing receipt... Please wait.</span>';
       if (rawText) rawText.value = "";
-      if (parsedForm) parsedForm.style.display = "none"; // Hide form while scanning
+      if (parsedForm) parsedForm.style.display = "none"; // Hide modal while scanning
 
       // Run OCR
       Tesseract.recognize(file, "eng", {
@@ -29,11 +34,11 @@ document.addEventListener("DOMContentLoaded", function () {
         .then(({ data: { text } }) => {
           if (rawText) rawText.value = text;
 
-          // Smart Parse the Text
+          // Smart Parse the Text & Open Modal
           parseReceipt(text);
 
           statusDiv.innerHTML =
-            '<span style="color: #10b981; font-weight: bold;">Scan complete! Review and save the details below.</span>';
+            '<span style="color: #10b981; font-weight: bold;">Scan complete! Review and save your expense in the pop-up.</span>';
         })
         .catch((err) => {
           console.error(err);
@@ -51,17 +56,15 @@ document.addEventListener("DOMContentLoaded", function () {
       .filter((l) => l.length > 0);
     if (lines.length === 0) return;
 
-    // 1. Extract Title (Disabled - User will manually enter this)
+    // 1. Leave Title blank for manual entry
     let title = "";
 
-    // 2. Extract Amount (Smarter Total Detection)
+    // 2. Extract Amount ("total" or "amount due", ignoring "sub")
     let maxAmount = 0.0;
     let totalCandidates = [];
 
     lines.forEach((line) => {
       const lowerLine = line.toLowerCase();
-
-      // Look strictly for "total" or "amount due", and EXPLICITLY IGNORE "sub" or "subtotal"
       if (
         (lowerLine.includes("total") || lowerLine.includes("amount due")) &&
         !lowerLine.includes("sub")
@@ -76,21 +79,19 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
     if (totalCandidates.length > 0) {
-      // Pick the highest number from the matching lines
       maxAmount = Math.max(...totalCandidates);
     } else {
-      // Fallback: Mathematically, the Final Total is almost always the highest xx.xx number on the receipt
       const allNumbers = text.match(/\b\d+[\.\,]\d{2}\b/g);
       if (allNumbers) {
         allNumbers.forEach((num) => {
           let val = parseFloat(num.replace(",", "."));
-          if (val > maxAmount && val < 1000000) maxAmount = val; // < 1,000,000 prevents barcodes from being misread
+          if (val > maxAmount && val < 1000000) maxAmount = val;
         });
       }
     }
 
-    // 3. Extract Date (Look for MM/DD/YYYY or YYYY-MM-DD formats)
-    let finalDate = new Date().toISOString().split("T")[0]; // Default to today
+    // 3. Extract Date (or default to today)
+    let finalDate = new Date().toISOString().split("T")[0];
     const dateRegex = /\b(\d{1,4}[\/\-\.]\d{1,2}[\/\-\.]\d{1,4})\b/;
     let dateMatch = text.match(dateRegex);
 
@@ -99,12 +100,13 @@ document.addEventListener("DOMContentLoaded", function () {
       if (!isNaN(d.getTime())) finalDate = d.toISOString().split("T")[0];
     }
 
-    // 4. Pre-fill the hidden form and reveal it
-    document.getElementById("parsedTitle").value = title; // This now safely leaves the input blank
+    // 4. Pre-fill inputs and pop open the modal!
+    document.getElementById("parsedTitle").value = title;
     document.getElementById("parsedAmount").value =
       maxAmount > 0 ? maxAmount.toFixed(2) : "";
     document.getElementById("parsedDate").value = finalDate;
 
-    parsedForm.style.display = "block"; // Reveal the form!
+    parsedForm.style.display = "flex";
+    setTimeout(() => document.getElementById("parsedTitle").focus(), 100);
   }
 });

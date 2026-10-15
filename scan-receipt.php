@@ -54,10 +54,9 @@ $act_stmt->execute();$activities = $act_stmt->get_result()->fetch_all(MYSQLI_ASS
             </div>
             <nav>
                 <a href="index.php">Dashboard</a>
-                <a href="shared-records.php">Shared Records</a>
-                <a href="add-expense.php">Add Expense</a>
-                <a class="active" href="scan-receipt.php">Scan Receipt</a>
+                <a href="scan-receipt.php">Scan Receipt</a>
                 <a href="expenses.php">Expense Records</a>
+                <a href="shared-records.php">Shared Records</a>
                
                 <div class="sidebar-bottom">
                     <!-- Logout Button (Left) -->
@@ -101,36 +100,55 @@ $act_stmt->execute();$activities = $act_stmt->get_result()->fetch_all(MYSQLI_ASS
                     <textarea id="ocrText" rows="6" placeholder="Raw text will appear here..." style="margin-top: 10px; width: 100%; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px;" readonly></textarea>
                 </details>
 
-                <!-- Hidden Form that appears after scanning -->
-                <form id="parsedExpenseForm" method="post" style="display: none; margin-top: 30px; padding-top: 24px; border-top: 2px solid #e2e8f0;">
-                    <h3 style="margin-top: 0; color: #0f172a; margin-bottom: 20px;">Review & Save</h3>
-                    <input type="hidden" name="action" value="add_expense">
-                    
-                    <div class="inline-form">
-                        <label>Title<input id="parsedTitle" name="title" required></label>
-                        <label>Amount<input id="parsedAmount" type="number" step="0.01" name="amount" required></label>
-                        <label>Category
-                            <div class="category-wrapper">
-                                <select name="category" class="dynamic-category-select">
-                                    <option>Housing & Living</option>
-                                    <option>Utilities</option>
-                                    <option>Food and Dining</option>
-                                    <option>Transportation</option>
-                                    <option>Health & Wellness</option>
-                                    <option>Personal Care & Household</option>
-                                    <option>Entertainment & Lifestyle</option>
-                                    <option>Financial & Obligations</option>
-                                    <option>Other</option>
-                                </select>
-                                <button type="button" onclick="toggleCategoryType()" class="category-toggle-btn" title="Switch to Business Categories">
-                                    <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
-                                </button>
+                <!-- Pre-Filled Add Expense Modal (Opens Automatically After Scan) -->
+                <div id="parsedExpenseForm" class="modal-overlay" style="display: none;">
+                    <div class="modal-box" style="max-width: 480px; width: 100%; text-align: left;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                            <h2 style="margin: 0;">Review & Save Expense</h2>
+                            <button type="button" onclick="document.getElementById('parsedExpenseForm').style.display='none'" style="background: transparent; border: none; font-size: 24px; line-height: 1; color: #94a3b8; cursor: pointer; padding: 0;">&times;</button>
+                        </div>
+
+                        <form method="post" style="display: flex; flex-direction: column; gap: 16px;">
+                            <input type="hidden" name="action" value="add_expense">
+                            
+                            <label>Expense Title
+                                <input id="parsedTitle" type="text" name="title" required placeholder="e.g. Lunch">
+                            </label>
+
+                            <label>Amount
+                                <input id="parsedAmount" type="number" step="0.01" name="amount" required placeholder="0.00">
+                            </label>
+
+                            <label>Category
+                                <div class="category-wrapper">
+                                    <select name="category" class="dynamic-category-select">
+                                        <option>Housing & Living</option>
+                                        <option>Utilities</option>
+                                        <option>Food and Dining</option>
+                                        <option>Transportation</option>
+                                        <option>Health & Wellness</option>
+                                        <option>Personal Care & Household</option>
+                                        <option>Entertainment & Lifestyle</option>
+                                        <option>Financial & Obligations</option>
+                                        <option>Other</option>
+                                    </select>
+                                    <button type="button" onclick="toggleCategoryType()" class="category-toggle-btn" title="Switch to Business Categories">
+                                        <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+                                    </button>
+                                </div>
+                            </label>
+
+                            <label>Date
+                                <input id="parsedDate" type="date" name="expense_date" required>
+                            </label>
+
+                            <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 8px;">
+                                <button type="submit" class="btn" style="width: 100%; margin: 0;">Save Expense</button>
+                                <button type="button" class="btn btn-secondary" style="width: 100%; margin: 0;" onclick="document.getElementById('parsedExpenseForm').style.display='none'">Cancel</button>
                             </div>
-                        </label>
-                        <label>Date<input id="parsedDate" type="date" name="expense_date" required></label>
-                        <button type="submit" class="btn btn-success">Save Expense</button>
+                        </form>
                     </div>
-                </form>
+                </div>
             </div>
         </main>
     </div>

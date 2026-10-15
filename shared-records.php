@@ -75,10 +75,9 @@ $pending_count = count($invitations) + count($activities);
             </div>
             <nav>
                 <a href="index.php">Dashboard</a>
-                <a href="shared-records.php">Shared Records</a>
-                <a href="add-expense.php">Add Expense</a>
                 <a href="scan-receipt.php">Scan Receipt</a>
                 <a href="expenses.php">Expense Records</a>
+                <a href="shared-records.php">Shared Records</a>
                
                 
                 <!-- Mail Notification Icon at Bottom -->
