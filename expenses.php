@@ -24,11 +24,16 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['action']) && $_POST['
     }
 }
 
-// Fetch only personal expenses (excluding shared)
-$stmt = $conn->prepare("SELECT * FROM expenses WHERE user_id = ? AND shared_record_id IS NULL ORDER BY expense_date DESC, id DESC");
-$stmt->bind_param("i", $user_id);
+// Month filter (?month=YYYY-MM, empty = all months)
+require_once __DIR__ . "/includes/month-filter.php";
+$mf = ecx_month_filter($conn, $user_id);
+
+// Fetch only personal expenses (excluding shared), optionally limited to one month
+$stmt = $conn->prepare("SELECT * FROM expenses WHERE user_id = ? AND shared_record_id IS NULL" . $mf['sql'] . " ORDER BY expense_date DESC, id DESC");
+$stmt->bind_param("i" . $mf['types'], $user_id, ...$mf['params']);
 $stmt->execute();
-$result = $stmt->get_result();
+$rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+$rows_total = array_sum(array_column($rows, 'amount'));
 
 // Fetch pending invitations (High Priority)
 $inv_stmt = $conn->prepare("SELECT c.id, s.name, c.role FROM collaborators c JOIN shared_records s ON c.record_id = s.id WHERE c.user_id = ? AND c.status = 'pending'");
@@ -51,53 +56,11 @@ $pending_count = count($invitations) + count($activities);
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Expense Records - ECXpense</title>
     <link rel="stylesheet" href="css/style.css">
+    <script src="js/ui-init.js"></script>
 </head>
 <body>
     <div class="layout">
-        <aside class="sidebar">
-            <div class="mobile-header">
-                <!-- Hamburger Icon -->
-                <button class="menu-toggle" onclick="document.querySelector('.sidebar').classList.toggle('active')">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" width="28" height="28">
-                        <line x1="3" y1="12" x2="21" y2="12"></line>
-                        <line x1="3" y1="6" x2="21" y2="6"></line>
-                        <line x1="3" y1="18" x2="21" y2="18"></line>
-                    </svg>
-                </button>
-                <div class="brand-container">
-                    <div class="brand">EC<span>Xpense</span></div>
-                    <p class="tagline">Smart Expense Tracker</p>
-                </div>
-            </div>
-            <nav>
-                <a href="index.php">Dashboard</a>
-                <a href="scan-receipt.php">Scan Receipt</a>
-                <a href="expenses.php">Expense Records</a>
-                <a href="shared-records.php">Shared Records</a>
-                
-                
-                <!-- Mail Notification Icon at Bottom -->
-                <div class="sidebar-bottom">
-                    <!-- Logout Button (Left) -->
-                    <button class="logout-icon-btn" onclick="document.getElementById('logoutModal').style.display='flex'; return false;" title="Log Out">
-                        <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-                            <polyline points="16 17 21 12 16 7"></polyline>
-                            <line x1="21" y1="12" x2="9" y2="12"></line>
-                        </svg>
-                    </button>
-
-                    <!-- Notifications Button (Right) -->
-                    <button class="notif-icon-btn" onclick="document.getElementById('notifModal').style.display='flex'; return false;" title="Invitations & Notifications">
-                        <svg viewBox="0 0 24 24" width="26" height="26" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
-                            <polyline points="22,6 12,13 2,6"></polyline>
-                        </svg>
-                        <?php if($pending_count > 0) echo "<span class='notif-dot'>$pending_count</span>"; ?>
-                    </button>
-                </div>
-            </nav>
-        </aside>
+        <?php include __DIR__ . '/includes/sidebar.php'; ?>
         
         <main class="main">
             <header class="topbar">
@@ -105,10 +68,17 @@ $pending_count = count($invitations) + count($activities);
                     <h1>Expense Records</h1>
                     <p>View all saved personal transactions.</p>
                 </div>
-                <button type="button" class="btn" onclick="document.getElementById('addExpenseModal').style.display='flex'">+ Add Expense</button>
+                <div class="topbar-actions">
+                    <?php ecx_render_month_filter($mf); ?>
+                    <button type="button" class="btn" onclick="document.getElementById('addExpenseModal').style.display='flex'">+ Add Expense</button>
+                </div>
             </header>
             
             <div class="panel">
+                <div class="records-summary">
+                    <span><strong><?= count($rows) ?></strong> <?= count($rows) === 1 ? 'record' : 'records' ?><?= $mf['selected'] !== '' ? ' in ' . htmlspecialchars(ecx_month_label($mf['selected'])) : '' ?></span>
+                    <span>Total <strong>₱<?= number_format((float)$rows_total, 2) ?></strong></span>
+                </div>
                 <div class="table-wrap">
                     <table>
                         <tr>
@@ -118,8 +88,8 @@ $pending_count = count($invitations) + count($activities);
                             <th>Date</th>
                             <th>Action</th>
                         </tr>
-                        <?php if($result && $result->num_rows): ?>
-                            <?php while($r = $result->fetch_assoc()): ?>
+                        <?php if($rows): ?>
+                            <?php foreach($rows as $r): ?>
                                 <tr>
                                     <td><?= htmlspecialchars($r['title']) ?></td>
                                     <td><?= htmlspecialchars($r['category']) ?></td>
@@ -129,10 +99,10 @@ $pending_count = count($invitations) + count($activities);
                                         <a class="delete" href="delete-expense.php?id=<?= $r['id'] ?>" onclick="return confirm('Delete this expense?')">Delete</a>
                                     </td>
                                 </tr>
-                            <?php endwhile; ?>
+                            <?php endforeach; ?>
                         <?php else: ?>
                             <tr>
-                                <td colspan="5" class="empty">No expense records found.</td>
+                                <td colspan="5" class="empty"><?= $mf['selected'] !== '' ? 'No expense records found for ' . htmlspecialchars(ecx_month_label($mf['selected'])) . '.' : 'No expense records found.' ?></td>
                             </tr>
                         <?php endif; ?>
                     </table>

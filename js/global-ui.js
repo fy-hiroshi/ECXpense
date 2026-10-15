@@ -93,3 +93,85 @@ document.addEventListener(
   },
   true,
 );
+
+// 4. Light / dark theme toggle and the expandable "Shared Records" sidebar group.
+//    The saved state is applied before first paint by js/ui-init.js; this wires up the buttons.
+document.addEventListener("DOMContentLoaded", function () {
+  var root = document.documentElement;
+
+  // --- Theme toggle ---
+  var themeBtn = document.getElementById("themeToggle");
+
+  function syncThemeButton() {
+    if (!themeBtn) return;
+    var label =
+      root.getAttribute("data-theme") === "dark"
+        ? "Switch to light mode"
+        : "Switch to dark mode";
+    themeBtn.title = label;
+    themeBtn.setAttribute("aria-label", label);
+  }
+
+  function setTheme(next, save) {
+    root.setAttribute("data-theme", next);
+    if (save) {
+      try {
+        localStorage.setItem("ecx-theme", next);
+      } catch (e) {}
+    }
+    syncThemeButton();
+    // Charts listen for this to re-color themselves.
+    window.dispatchEvent(new CustomEvent("themechange", { detail: { theme: next } }));
+  }
+
+  syncThemeButton();
+  if (themeBtn) {
+    themeBtn.addEventListener("click", function () {
+      setTheme(root.getAttribute("data-theme") === "dark" ? "light" : "dark", true);
+    });
+  }
+
+  // Until the user picks a theme themselves, keep following the OS setting.
+  if (window.matchMedia) {
+    var mq = window.matchMedia("(prefers-color-scheme: dark)");
+    var onOsChange = function (e) {
+      var saved = null;
+      try {
+        saved = localStorage.getItem("ecx-theme");
+      } catch (err) {}
+      if (saved !== "dark" && saved !== "light") setTheme(e.matches ? "dark" : "light", false);
+    };
+    if (mq.addEventListener) mq.addEventListener("change", onOsChange);
+  }
+
+  // --- Expandable Shared Records group in the sidebar ---
+  var navToggle = document.querySelector(".nav-toggle");
+  if (navToggle) {
+    var syncNav = function () {
+      navToggle.setAttribute(
+        "aria-expanded",
+        root.getAttribute("data-shared-nav") === "open" ? "true" : "false",
+      );
+    };
+    // If the list is long, scroll it so the record you are viewing is visible.
+    var revealActive = function () {
+      var list = document.getElementById("sharedNavList");
+      var active = list && list.querySelector("a.active");
+      if (!active || list.offsetParent === null) return; // nothing to show, or list is collapsed
+      list.scrollTop = active.offsetTop - (list.clientHeight - active.offsetHeight) / 2;
+    };
+    syncNav();
+    revealActive();
+    navToggle.addEventListener("click", function () {
+      var open = root.getAttribute("data-shared-nav") === "open";
+      if (open) root.removeAttribute("data-shared-nav");
+      else root.setAttribute("data-shared-nav", "open");
+      try {
+        if (open) localStorage.removeItem("ecx-shared-nav");
+        else localStorage.setItem("ecx-shared-nav", "open");
+      } catch (e) {}
+      syncNav();
+      revealActive();
+    });
+  }
+});

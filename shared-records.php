@@ -55,53 +55,11 @@ $pending_count = count($invitations) + count($activities);
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Shared Records - ECXpense</title>
     <link rel="stylesheet" href="css/style.css">
+    <script src="js/ui-init.js"></script>
 </head>
 <body>
     <div class="layout">
-        <aside class="sidebar">
-            <div class="mobile-header">
-                <!-- Hamburger Icon -->
-                <button class="menu-toggle" onclick="document.querySelector('.sidebar').classList.toggle('active')">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" width="28" height="28">
-                        <line x1="3" y1="12" x2="21" y2="12"></line>
-                        <line x1="3" y1="6" x2="21" y2="6"></line>
-                        <line x1="3" y1="18" x2="21" y2="18"></line>
-                    </svg>
-                </button>
-                <div class="brand-container">
-                    <div class="brand">EC<span>Xpense</span></div>
-                    <p class="tagline">Smart Expense Tracker</p>
-                </div>
-            </div>
-            <nav>
-                <a href="index.php">Dashboard</a>
-                <a href="scan-receipt.php">Scan Receipt</a>
-                <a href="expenses.php">Expense Records</a>
-                <a href="shared-records.php">Shared Records</a>
-               
-                
-                <!-- Mail Notification Icon at Bottom -->
-                <div class="sidebar-bottom">
-                    <!-- Logout Button (Left) -->
-                    <button class="logout-icon-btn" onclick="document.getElementById('logoutModal').style.display='flex'; return false;" title="Log Out">
-                        <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-                            <polyline points="16 17 21 12 16 7"></polyline>
-                            <line x1="21" y1="12" x2="9" y2="12"></line>
-                        </svg>
-                    </button>
-
-                    <!-- Notifications Button (Right) -->
-                    <button class="notif-icon-btn" onclick="document.getElementById('notifModal').style.display='flex'; return false;" title="Invitations & Notifications">
-                        <svg viewBox="0 0 24 24" width="26" height="26" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
-                            <polyline points="22,6 12,13 2,6"></polyline>
-                        </svg>
-                        <?php if($pending_count > 0) echo "<span class='notif-dot'>$pending_count</span>"; ?>
-                    </button>
-                </div>
-            </nav>
-        </aside>
+        <?php include __DIR__ . '/includes/sidebar.php'; ?>
         
         <main class="main">
             <header class="topbar">

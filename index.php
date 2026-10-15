@@ -23,15 +23,19 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['action']) && $_POST['
     }
 }
 
+// Month filter (?month=YYYY-MM, empty = all months)
+require_once __DIR__ . "/includes/month-filter.php";
+$mf = ecx_month_filter($conn, $user_id);
+
 // Get total summary for personal user expenses ONLY (excluding shared)
-$stmt1 = $conn->prepare("SELECT COALESCE(SUM(amount),0) AS total, COUNT(*) AS count FROM expenses WHERE user_id = ? AND shared_record_id IS NULL");
-$stmt1->bind_param("i", $user_id);
+$stmt1 = $conn->prepare("SELECT COALESCE(SUM(amount),0) AS total, COUNT(*) AS count FROM expenses WHERE user_id = ? AND shared_record_id IS NULL" . $mf['sql']);
+$stmt1->bind_param("i" . $mf['types'], $user_id, ...$mf['params']);
 $stmt1->execute();
 $summary = $stmt1->get_result()->fetch_assoc();
 
 // Get recent personal expenses ONLY (excluding shared)
-$stmt2 = $conn->prepare("SELECT * FROM expenses WHERE user_id = ? AND shared_record_id IS NULL ORDER BY expense_date DESC, id DESC LIMIT 5");
-$stmt2->bind_param("i", $user_id);
+$stmt2 = $conn->prepare("SELECT * FROM expenses WHERE user_id = ? AND shared_record_id IS NULL" . $mf['sql'] . " ORDER BY expense_date DESC, id DESC LIMIT 5");
+$stmt2->bind_param("i" . $mf['types'], $user_id, ...$mf['params']);
 $stmt2->execute();
 $recent = $stmt2->get_result();
 
@@ -56,54 +60,12 @@ $pending_count = count($invitations) + count($activities);
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ECXpense - Dashboard</title>
     <link rel="stylesheet" href="css/style.css">
+    <script src="js/ui-init.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
     <div class="layout">
-        <aside class="sidebar">
-            <div class="mobile-header">
-                <!-- Hamburger Icon -->
-                <button class="menu-toggle" onclick="document.querySelector('.sidebar').classList.toggle('active')">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" width="28" height="28">
-                        <line x1="3" y1="12" x2="21" y2="12"></line>
-                        <line x1="3" y1="6" x2="21" y2="6"></line>
-                        <line x1="3" y1="18" x2="21" y2="18"></line>
-                    </svg>
-                </button>
-                <div class="brand-container">
-                    <div class="brand">EC<span>Xpense</span></div>
-                    <p class="tagline">Smart Expense Tracker</p>
-                </div>
-            </div>
-            <nav>
-                <a href="index.php">Dashboard</a>
-                <a href="scan-receipt.php">Scan Receipt</a>
-                <a href="expenses.php">Expense Records</a>
-                <a href="shared-records.php">Shared Records</a>
-                
-                
-                <!-- Mail Notification Icon at Bottom -->
-                <div class="sidebar-bottom">
-                    <!-- Logout Button (Left) -->
-                    <button class="logout-icon-btn" onclick="document.getElementById('logoutModal').style.display='flex'; return false;" title="Log Out">
-                        <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-                            <polyline points="16 17 21 12 16 7"></polyline>
-                            <line x1="21" y1="12" x2="9" y2="12"></line>
-                        </svg>
-                    </button>
-
-                    <!-- Notifications Button (Right) -->
-                    <button class="notif-icon-btn" onclick="document.getElementById('notifModal').style.display='flex'; return false;" title="Invitations & Notifications">
-                        <svg viewBox="0 0 24 24" width="26" height="26" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
-                            <polyline points="22,6 12,13 2,6"></polyline>
-                        </svg>
-                        <?php if($pending_count > 0) echo "<span class='notif-dot'>$pending_count</span>"; ?>
-                    </button>
-                </div>
-            </nav>
-        </aside>
+        <?php include __DIR__ . '/includes/sidebar.php'; ?>
         
         <main class="main">
             <header class="topbar">
@@ -111,7 +73,10 @@ $pending_count = count($invitations) + count($activities);
                     <h1>Dashboard</h1>
                     <p>Track your personal expenses.</p>
                 </div>
-                <button type="button" class="btn" onclick="document.getElementById('addExpenseModal').style.display='flex'">+ Add Expense</button>
+                <div class="topbar-actions">
+                    <?php ecx_render_month_filter($mf); ?>
+                    <button type="button" class="btn" onclick="document.getElementById('addExpenseModal').style.display='flex'">+ Add Expense</button>
+                </div>
             </header>
             
             <section class="cards">
@@ -156,7 +121,7 @@ $pending_count = count($invitations) + count($activities);
                             </table>
                         </div>
                     <?php else: ?>
-                        <div class="empty">No expenses yet. Add your first expense.</div>
+                        <div class="empty"><?= $mf['selected'] !== '' ? 'No expenses in ' . htmlspecialchars(ecx_month_label($mf['selected'])) . '.' : 'No expenses yet. Add your first expense.' ?></div>
                     <?php endif; ?>
                 </div>
             </section>
@@ -164,21 +129,41 @@ $pending_count = count($invitations) + count($activities);
     </div>
 
     <script>
-        fetch('api/category-data.php')
+        // The same ?month= filter drives the chart (validated again on the server).
+        const categoryUrl = 'api/category-data.php<?= $mf['selected'] !== '' ? '?month=' . urlencode($mf['selected']) : '' ?>';
+        fetch(categoryUrl)
             .then(r => r.json())
             .then(data => {
-                new Chart(document.getElementById('categoryChart'), {
+                const canvas = document.getElementById('categoryChart');
+                if (!data.values.length) {
+                    canvas.insertAdjacentHTML('afterend', '<div class="empty">No spending data for this period.</div>');
+                    canvas.remove();
+                    return;
+                }
+                const colors = ecxThemeColors();
+                const chart = new Chart(canvas, {
                     type: 'doughnut',
                     data: {
                         labels: data.labels,
-                        datasets: [{ data: data.values }]
+                        datasets: [{
+                            data: data.values,
+                            backgroundColor: ecxChartColors(data.values.length),
+                            borderColor: colors.surface
+                        }]
                     },
                     options: {
                         responsive: true,
                         plugins: {
-                            legend: { position: 'bottom' }
+                            legend: { position: 'bottom', labels: { color: colors.text } }
                         }
                     }
+                });
+                // Re-color the chart when the light/dark toggle is used.
+                window.addEventListener('themechange', () => {
+                    const c = ecxThemeColors();
+                    chart.data.datasets[0].borderColor = c.surface;
+                    chart.options.plugins.legend.labels.color = c.text;
+                    chart.update();
                 });
             });
     </script>

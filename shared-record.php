@@ -157,49 +157,14 @@ $pending_count = count($invitations) + count($activities);
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= htmlspecialchars($record['name']) ?> - ECXpense</title>
     <link rel="stylesheet" href="css/style.css">
+    <script src="js/ui-init.js"></script>
     <!-- Include Chart.js & Tesseract.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 </head>
 <body>
     <div class="layout">
-        <aside class="sidebar">
-            <div class="mobile-header">
-                <button class="menu-toggle" onclick="document.querySelector('.sidebar').classList.toggle('active')">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" width="28" height="28"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
-                </button>
-                <div class="brand-container">
-                    <div class="brand">EC<span>Xpense</span></div>
-                    <p class="tagline">Smart Expense Tracker</p>
-                </div>
-            </div>
-            <nav>
-                <a href="index.php">Dashboard</a>
-                <a href="scan-receipt.php">Scan Receipt</a>
-                <a href="expenses.php">Expense Records</a>
-                <a href="shared-records.php">Shared Records</a>
-               
-                <div class="sidebar-bottom">
-                    <!-- Logout Button (Left) -->
-                    <button class="logout-icon-btn" onclick="document.getElementById('logoutModal').style.display='flex'; return false;" title="Log Out">
-                        <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-                            <polyline points="16 17 21 12 16 7"></polyline>
-                            <line x1="21" y1="12" x2="9" y2="12"></line>
-                        </svg>
-                    </button>
-
-                    <!-- Notifications Button (Right) -->
-                    <button class="notif-icon-btn" onclick="document.getElementById('notifModal').style.display='flex'; return false;" title="Invitations & Notifications">
-                        <svg viewBox="0 0 24 24" width="26" height="26" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
-                            <polyline points="22,6 12,13 2,6"></polyline>
-                        </svg>
-                        <?php if($pending_count > 0) echo "<span class='notif-dot'>$pending_count</span>"; ?>
-                    </button>
-                </div>
-            </nav>
-        </aside>
+        <?php include __DIR__ . '/includes/sidebar.php'; ?>
         
         <main class="main">
             <header class="topbar">
@@ -212,7 +177,7 @@ $pending_count = count($invitations) + count($activities);
                     </h1>
                     <p>Collaborative Workspace</p>
                 </div>
-                <a href="shared-records.php" class="btn btn-secondary" style="border: 1px solid #cbd5e1;">Back to Spaces</a>
+                <a href="shared-records.php" class="btn btn-secondary" style="border: 1px solid var(--border-strong);">Back to Spaces</a>
             </header>
             
             <?php if($message): ?><div class="alert"><?= htmlspecialchars($message) ?></div><?php endif; ?>
@@ -228,11 +193,11 @@ $pending_count = count($invitations) + count($activities);
             <!-- DASHBOARD TAB -->
             <div id="dashboard" class="tab-content active panel">
                 <section class="cards" style="grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); margin-bottom: 30px;">
-                    <div class="card" style="box-shadow: none; background: #f8fafc;">
+                    <div class="card" style="box-shadow: none; background: var(--surface-2);">
                         <div class="label">Total Workspace Expenses</div>
                         <div class="value">₱<?= number_format((float)$summary['total'], 2) ?></div>
                     </div>
-                    <div class="card" style="box-shadow: none; background: #f8fafc;">
+                    <div class="card" style="box-shadow: none; background: var(--surface-2);">
                         <div class="label">Total Transactions</div>
                         <div class="value"><?= (int)$summary['count'] ?></div>
                     </div>
@@ -240,7 +205,7 @@ $pending_count = count($invitations) + count($activities);
                 
                 <?php if($summary['count'] > 0): ?>
                 <div style="max-width: 450px; margin: 0 auto; padding: 20px;">
-                    <h3 style="text-align: center; color: #0f172a; margin-bottom: 24px;">Spending by Category</h3>
+                    <h3 style="text-align: center; color: var(--heading); margin-bottom: 24px;">Spending by Category</h3>
                     <canvas id="sharedCategoryChart"></canvas>
                 </div>
                 <?php else: ?>
@@ -317,9 +282,9 @@ $pending_count = count($invitations) + count($activities);
                     <button class="btn" id="scanBtn" type="button" style="margin-top: 20px;">Extract Details</button>
                     <div id="status" class="status" style="margin-top: 16px; margin-bottom: 10px;"></div>
                     
-                    <details style="margin-top: 10px; color: #64748b; font-size: 14px; cursor: pointer;">
+                    <details style="margin-top: 10px; color: var(--muted); font-size: 14px; cursor: pointer;">
                         <summary>View Raw Scanned Text</summary>
-                        <textarea id="ocrText" rows="4" style="margin-top: 10px; width: 100%; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px;" readonly></textarea>
+                        <textarea id="ocrText" rows="4" style="margin-top: 10px; width: 100%; border: 1px solid var(--border); border-radius: 8px; padding: 10px;" readonly></textarea>
                     </details>
 
                     <!-- Pre-Filled Workspace Expense Modal (Opens Automatically After Scan) -->
@@ -426,7 +391,7 @@ $pending_count = count($invitations) + count($activities);
                     <button type="submit" class="btn">Save Name</button>
                 </form>
 
-                <hr style="border:0; border-top:1px solid #e2e8f0; margin: 30px 0;">
+                <hr style="border:0; border-top:1px solid var(--border); margin: 30px 0;">
                 
                 <h3 style="color: #dc2626; margin-top: 0; margin-bottom: 20px;">Danger Zone</h3>
                 
@@ -575,16 +540,28 @@ $pending_count = count($invitations) + count($activities);
         document.addEventListener("DOMContentLoaded", function() {
             const ctx = document.getElementById('sharedCategoryChart');
             if (ctx && <?= $summary['count'] ?> > 0) {
-                new Chart(ctx, {
+                const colors = ecxThemeColors();
+                const chart = new Chart(ctx, {
                     type: 'doughnut',
                     data: {
                         labels: <?= json_encode($chart_labels) ?>,
-                        datasets: [{ data: <?= json_encode($chart_values) ?> }]
+                        datasets: [{
+                            data: <?= json_encode($chart_values) ?>,
+                            backgroundColor: ecxChartColors(<?= count($chart_values) ?>),
+                            borderColor: colors.surface
+                        }]
                     },
                     options: {
                         responsive: true,
-                        plugins: { legend: { position: 'bottom' } }
+                        plugins: { legend: { position: 'bottom', labels: { color: colors.text } } }
                     }
+                });
+                // Re-color the chart when the light/dark toggle is used.
+                window.addEventListener('themechange', () => {
+                    const c = ecxThemeColors();
+                    chart.data.datasets[0].borderColor = c.surface;
+                    chart.options.plugins.legend.labels.color = c.text;
+                    chart.update();
                 });
             }
         });

@@ -44,6 +44,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - ECXpense</title>
     <link rel="stylesheet" href="css/style.css">
+    <script src="js/ui-init.js"></script>
 </head>
 <body class="auth-layout">
     <div class="auth-card">
