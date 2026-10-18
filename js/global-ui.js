@@ -2,8 +2,8 @@ document.addEventListener("DOMContentLoaded", function () {
   // 1. Inject the Custom Confirmation Modal into the page (matches Logout Modal)
   const confirmModalHTML = `
         <div id="customConfirmModal" class="modal-overlay" style="display: none;">
-            <div class="modal-box">
-                <h2 id="confirmModalTitle">Delete Expense?</h2>
+            <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="confirmModalTitle">
+                <h2 id="confirmModalTitle">Delete expense?</h2>
                 <p id="confirmModalText">Are you sure you want to permanently delete this record? This action cannot be undone.</p>
                 <div class="modal-actions">
                     <button type="button" class="btn btn-secondary" onclick="document.getElementById('customConfirmModal').style.display='none'">Cancel</button>
@@ -39,14 +39,14 @@ document.addEventListener("DOMContentLoaded", function () {
         msg.toLowerCase().includes("user") ||
         msg.toLowerCase().includes("remove")
       ) {
-        confirmTitle.textContent = "Remove Collaborator?";
+        confirmTitle.textContent = "Remove collaborator?";
         confirmText.textContent =
-          "Are you sure you want to remove this user from the workspace?";
+          "They will lose access to this workspace and its expenses.";
         confirmBtn.textContent = "Remove";
       } else {
-        confirmTitle.textContent = "Delete Expense?";
+        confirmTitle.textContent = "Delete expense?";
         confirmText.textContent =
-          "Are you sure you want to permanently delete this expense? This action cannot be undone.";
+          "This permanently deletes the expense. You can't undo this.";
         confirmBtn.textContent = "Delete";
       }
 
@@ -112,7 +112,7 @@ document.addEventListener("DOMContentLoaded", function () {
     themeBtn.setAttribute("aria-label", label);
   }
 
-  function setTheme(next, save) {
+  function applyTheme(next, save) {
     root.setAttribute("data-theme", next);
     if (save) {
       try {
@@ -124,10 +124,57 @@ document.addEventListener("DOMContentLoaded", function () {
     window.dispatchEvent(new CustomEvent("themechange", { detail: { theme: next } }));
   }
 
+  // When the switch comes from a click, the new theme spreads out from that point as a circle.
+  // It uses the View Transitions API; browsers without it (and people who prefer reduced
+  // motion) get the same switch with no animation.
+  function setTheme(next, save, origin) {
+    var reduceMotion =
+      window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (!origin || reduceMotion || !document.startViewTransition) {
+      applyTheme(next, save);
+      return;
+    }
+    var x = origin.x;
+    var y = origin.y;
+    var radius = Math.hypot(
+      Math.max(x, window.innerWidth - x),
+      Math.max(y, window.innerHeight - y),
+    );
+    root.classList.add("theme-switching");
+    var transition = document.startViewTransition(function () {
+      applyTheme(next, save);
+    });
+    var done = function () {
+      root.classList.remove("theme-switching");
+    };
+    transition.finished.then(done, done);
+    transition.ready
+      .then(function () {
+        root.animate(
+          {
+            clipPath: [
+              "circle(0px at " + x + "px " + y + "px)",
+              "circle(" + radius + "px at " + x + "px " + y + "px)",
+            ],
+          },
+          {
+            duration: 750,
+            easing: "cubic-bezier(0.5, 0, 0.2, 1)",
+            pseudoElement: "::view-transition-new(root)",
+          },
+        );
+      })
+      .catch(function () {});
+  }
+
   syncThemeButton();
   if (themeBtn) {
     themeBtn.addEventListener("click", function () {
-      setTheme(root.getAttribute("data-theme") === "dark" ? "light" : "dark", true);
+      var box = themeBtn.getBoundingClientRect();
+      setTheme(root.getAttribute("data-theme") === "dark" ? "light" : "dark", true, {
+        x: box.left + box.width / 2,
+        y: box.top + box.height / 2,
+      });
     });
   }
 
@@ -174,4 +221,107 @@ document.addEventListener("DOMContentLoaded", function () {
       revealActive();
     });
   }
+});
+
+// 5. Small interface touches: the statement figure counts up once, Escape and a click on the
+//    backdrop close modals, and the mobile menu closes when you tap outside it.
+document.addEventListener("DOMContentLoaded", function () {
+  var reduceMotion =
+    window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  function money(n) {
+    return n.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  // The figure already holds its final value in the HTML; this only animates it.
+  // After logging in it waits for the welcome sequence to lift away first.
+  var welcome = document.getElementById("welcome");
+  var countupsStarted = false;
+  function startCountups() {
+    if (countupsStarted) return;
+    countupsStarted = true;
+    document.querySelectorAll("[data-countup]").forEach(function (el) {
+      var target = parseFloat(el.getAttribute("data-countup"));
+      if (reduceMotion || !isFinite(target) || target <= 0) return;
+      var duration = 900;
+      var start = null;
+      function frame(now) {
+        if (start === null) start = now;
+        var t = Math.min((now - start) / duration, 1);
+        var eased = 1 - Math.pow(1 - t, 3);
+        el.textContent = money(target * eased);
+        if (t < 1) requestAnimationFrame(frame);
+        else el.textContent = money(target);
+      }
+      requestAnimationFrame(frame);
+    });
+  }
+  if (!reduceMotion) {
+    document.querySelectorAll("[data-countup]").forEach(function (el) {
+      var target = parseFloat(el.getAttribute("data-countup"));
+      if (isFinite(target) && target > 0) el.textContent = money(0);
+    });
+  }
+  if (welcome && !reduceMotion) {
+    // Click or any key skips the welcome; the page content then arrives straight away.
+    var skipWelcome = function () {
+      if (welcome.classList.contains("skip")) return;
+      welcome.classList.add("skip");
+      document.documentElement.classList.remove("welcoming");
+      startCountups();
+    };
+    welcome.addEventListener("click", skipWelcome);
+    document.addEventListener("keydown", skipWelcome, { once: true });
+    // Otherwise the figure starts counting as the curtain is lifting (1.65s + a little).
+    setTimeout(startCountups, 1900);
+  } else {
+    startCountups();
+  }
+
+  function closeModal(modal) {
+    if (!modal || modal.style.display === "none" || modal.classList.contains("closing")) return;
+    modal.classList.add("closing");
+    setTimeout(function () {
+      modal.style.display = "none";
+      modal.classList.remove("closing");
+    }, 220);
+  }
+
+  document.addEventListener("keydown", function (e) {
+    if (e.key !== "Escape") return;
+    document.querySelectorAll(".modal-overlay").forEach(function (m) {
+      if (m.style.display === "flex") closeModal(m);
+    });
+  });
+
+  document.addEventListener("mousedown", function (e) {
+    // A click on the dimmed backdrop itself (not on the box) closes the modal.
+    if (e.target.classList && e.target.classList.contains("modal-overlay")) closeModal(e.target);
+  });
+
+  document.addEventListener("click", function (e) {
+    var sidebar = document.querySelector(".sidebar.active");
+    if (sidebar && !e.target.closest(".sidebar nav") && !e.target.closest(".menu-toggle")) {
+      sidebar.classList.remove("active");
+    }
+  });
+});
+
+// 6. Sign in / Register: the button shows a spinner once the form is on its way, so the
+//    short wait before the next page feels acknowledged.
+document.addEventListener("DOMContentLoaded", function () {
+  var form = document.querySelector(".auth-card form");
+  if (!form) return;
+  var btn = form.querySelector('button[type="submit"]');
+  form.addEventListener("submit", function () {
+    if (!btn) return;
+    btn.classList.add("is-loading");
+    btn.setAttribute("aria-busy", "true");
+  });
+  // Coming back with the browser's back button restores the page as it was left.
+  window.addEventListener("pageshow", function () {
+    if (!btn) return;
+    btn.classList.remove("is-loading");
+    btn.removeAttribute("aria-busy");
+  });
 });

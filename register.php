@@ -40,34 +40,43 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     <title>Register - ECXpense</title>
     <link rel="stylesheet" href="css/style.css">
     <script src="js/ui-init.js"></script>
+    <link rel="icon" type="image/png" href="images/favicon.png">
 </head>
 <body class="auth-layout">
-    <div class="auth-card">
-        <div class="brand auth-brand">EC<span>Xpense</span></div>
-        <h1>Create an Account</h1>
-        <p>Start tracking your expenses securely.</p>
-        
-        <?php if ($message): ?>
-            <div class="<?= $messageType ?>"><?= htmlspecialchars($message) ?></div>
-        <?php endif; ?>
-
-        <form method="post">
-            <label style="text-align: left;">Username
-                <input type="text" name="username" required placeholder="Enter your username" value="<?= htmlspecialchars($_POST['username'] ?? '') ?>">
-            </label>
-            <label style="text-align: left;">Password
-                <input type="password" name="password" required placeholder="Create a password">
-            </label>
-            <label style="text-align: left;">Verify Password
-                <input type="password" name="verify_password" required placeholder="Confirm your password">
-            </label>
-            <button class="btn" type="submit">Sign Up</button>
-        </form>
-        
-        <div class="auth-links">
-            Already have an account? <a href="login.php">Log in</a>
+    <aside class="auth-visual" aria-hidden="true">
+        <div class="brand">EC<span>Xpense</span></div>
+        <div class="auth-visual-copy">
+            <p class="auth-statement">Know where every peso went.</p>
+            <p class="auth-sub">Track personal spending, share records with your team, and let receipts fill in the details for you.</p>
         </div>
-    </div>
+    </aside>
+    <main class="auth-panel">
+        <div class="auth-card">
+            <h1>Create your account</h1>
+            <p>Start tracking your expenses in a minute.</p>
+
+            <?php if ($message): ?>
+                <div class="<?= $messageType ?>" role="alert"><?= htmlspecialchars($message) ?></div>
+            <?php endif; ?>
+
+            <form method="post">
+                <label>Username
+                    <input type="text" name="username" required autofocus autocomplete="username" placeholder="Choose a username" value="<?= htmlspecialchars($_POST['username'] ?? '') ?>">
+                </label>
+                <label>Password
+                    <input type="password" name="password" required autocomplete="new-password" placeholder="Create a password">
+                </label>
+                <label>Confirm password
+                    <input type="password" name="verify_password" required autocomplete="new-password" placeholder="Enter the password again">
+                </label>
+                <button class="btn" type="submit">Create account</button>
+            </form>
+
+            <div class="auth-links">
+                Already have an account? <a href="login.php">Log in</a>
+            </div>
+        </div>
+    </main>
     <script src="js/global-ui.js"></script>
 </body>
 </html>

@@ -161,6 +161,7 @@ $pending_count = count($invitations) + count($activities);
     <!-- Include Chart.js & Tesseract.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+    <link rel="icon" type="image/png" href="images/favicon.png">
 </head>
 <body>
     <div class="layout">
@@ -169,48 +170,60 @@ $pending_count = count($invitations) + count($activities);
         <main class="main">
             <header class="topbar">
                 <div>
-                    <h1 style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
-                        <?= htmlspecialchars($record['name']) ?> 
-                        <span class="role-badge role-<?= strtolower($record['role']) ?>" style="font-size: 13px; margin: 0; padding: 4px 12px; line-height: 1.2;">
-                            <?= ucfirst($record['role']) ?>
-                        </span>
+                    <h1>
+                        <?= htmlspecialchars($record['name']) ?>
+                        <span class="role-badge role-<?= strtolower($record['role']) ?>"><?= ucfirst($record['role']) ?></span>
                     </h1>
-                    <p>Collaborative Workspace</p>
+                    <p>Shared workspace</p>
                 </div>
-                <a href="shared-records.php" class="btn btn-secondary" style="border: 1px solid var(--border-strong);">Back to Spaces</a>
+                <a href="shared-records.php" class="btn btn-secondary">All shared records</a>
             </header>
-            
+
             <?php if($message): ?><div class="alert"><?= htmlspecialchars($message) ?></div><?php endif; ?>
 
             <div class="tabs">
                 <button class="tab-btn active" onclick="openTab('dashboard', this)">Dashboard</button>
                 <button class="tab-btn" onclick="openTab('expenses', this)">Expenses</button>
-                <?php if($is_editor): ?><button class="tab-btn" onclick="openTab('scanner', this)">Scan Receipt</button><?php endif; ?>
+                <?php if($is_editor): ?><button class="tab-btn" onclick="openTab('scanner', this)">Scan receipt</button><?php endif; ?>
                 <button class="tab-btn" onclick="openTab('collaborators', this)">Collaborators</button>
                 <?php if($is_owner): ?><button class="tab-btn" onclick="openTab('settings', this)">Settings</button><?php endif; ?>
             </div>
 
             <!-- DASHBOARD TAB -->
-            <div id="dashboard" class="tab-content active panel">
-                <section class="cards" style="grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); margin-bottom: 30px;">
-                    <div class="card" style="box-shadow: none; background: var(--surface-2);">
-                        <div class="label">Total Workspace Expenses</div>
-                        <div class="value">₱<?= number_format((float)$summary['total'], 2) ?></div>
+            <div id="dashboard" class="tab-content active">
+                <?php $avg_amount = (int)$summary['count'] > 0 ? (float)$summary['total'] / (int)$summary['count'] : 0; ?>
+                <section class="masthead" aria-label="Workspace summary">
+                    <div class="masthead-top">
+                        <p class="masthead-label">Workspace total</p>
                     </div>
-                    <div class="card" style="box-shadow: none; background: var(--surface-2);">
-                        <div class="label">Total Transactions</div>
-                        <div class="value"><?= (int)$summary['count'] ?></div>
+                    <div class="masthead-bottom">
+                        <div class="masthead-figure">
+                            <span class="cur">₱</span><span data-countup="<?= (float)$summary['total'] ?>"><?= number_format((float)$summary['total'], 2) ?></span>
+                        </div>
+                        <dl class="masthead-stats">
+                            <div>
+                                <dt>Transactions</dt>
+                                <dd><?= (int)$summary['count'] ?></dd>
+                            </div>
+                            <div>
+                                <dt>Average</dt>
+                                <dd>₱<?= number_format($avg_amount, 2) ?></dd>
+                            </div>
+                        </dl>
                     </div>
                 </section>
-                
-                <?php if($summary['count'] > 0): ?>
-                <div style="max-width: 450px; margin: 0 auto; padding: 20px;">
-                    <h3 style="text-align: center; color: var(--heading); margin-bottom: 24px;">Spending by Category</h3>
-                    <canvas id="sharedCategoryChart"></canvas>
+
+                <div class="panel">
+                    <h2>Spending by category</h2>
+                    <?php if($summary['count'] > 0): ?>
+                        <div class="breakdown">
+                            <div class="chart-wrap"><canvas id="sharedCategoryChart" aria-label="Spending by category"></canvas></div>
+                            <ul class="legend" id="sharedCategoryLegend"></ul>
+                        </div>
+                    <?php else: ?>
+                        <div class="empty">No expenses recorded yet. Add the first one to see the breakdown.</div>
+                    <?php endif; ?>
                 </div>
-                <?php else: ?>
-                    <div class="empty">No expenses recorded yet. Add your first expense to see the chart!</div>
-                <?php endif; ?>
             </div>
 
             <!-- EXPENSES TAB -->
@@ -218,8 +231,8 @@ $pending_count = count($invitations) + count($activities);
                 <?php if($is_editor): ?>
                     <form method="post" class="inline-form">
                         <input type="hidden" name="action" value="add_expense">
-                        <label>Title<input name="title" required placeholder="e.g. Server Hosting"></label>
-                        <label>Amount<input type="number" step="0.01" name="amount" required placeholder="0.00"></label>
+                        <label>Title<input name="title" required placeholder="e.g. Server hosting"></label>
+                        <label>Amount (₱)<input type="number" step="0.01" name="amount" required placeholder="0.00" inputmode="decimal"></label>
                         <label>Category
                             <div class="category-wrapper">
                                 <select name="category" class="dynamic-category-select">
@@ -232,32 +245,35 @@ $pending_count = count($invitations) + count($activities);
                                     <option>Business Insurance & Taxes</option>
                                     <option>Other</option>
                                 </select>
-                                <button type="button" onclick="toggleCategoryType()" class="category-toggle-btn" title="Switch to Personal Categories">
+                                <button type="button" onclick="toggleCategoryType()" class="category-toggle-btn" title="Switch to personal categories" aria-label="Switch to personal categories">
                                     <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>
                                 </button>
                             </div>
                         </label>
                         <label>Date<input type="date" name="expense_date" value="<?= date('Y-m-d') ?>" required></label>
-                        <button type="submit" class="btn">Add Expense</button>
+                        <button type="submit" class="btn">Add expense</button>
                     </form>
                 <?php endif; ?>
 
                 <div class="table-wrap">
                     <table>
-                        <tr><th>Added By</th><th>Title</th><th>Category</th><th>Amount</th><th>Date</th><?php if($is_editor): ?><th>Action</th><?php endif; ?></tr>
+                        <thead>
+                            <tr><th>Title</th><th>Category</th><th>Added by</th><th>Date</th><th class="num">Amount</th><?php if($is_editor): ?><th class="num"><span class="sr-only">Actions</span></th><?php endif; ?></tr>
+                        </thead>
+                        <tbody>
                         <?php if($expenses->num_rows): while($e =$expenses->fetch_assoc()): ?>
                             <tr>
-                                <td><strong><?= htmlspecialchars($e['username']) ?></strong></td>
                                 <td><?= htmlspecialchars($e['title']) ?></td>
                                 <td><?= htmlspecialchars($e['category']) ?></td>
-                                <td>₱<?= number_format($e['amount'], 2) ?></td>
-                                <td><?= htmlspecialchars($e['expense_date']) ?></td>
+                                <td><?= htmlspecialchars($e['username']) ?></td>
+                                <td class="muted"><?= date('M j, Y', strtotime($e['expense_date'])) ?></td>
+                                <td class="num">₱<?= number_format($e['amount'], 2) ?></td>
                                 <?php if($is_editor): ?>
-                                <td>
-                                    <form method="post" style="margin:0; display:inline;">
+                                <td class="num">
+                                    <form method="post" style="display:inline;">
                                         <input type="hidden" name="action" value="delete_expense">
                                         <input type="hidden" name="expense_id" value="<?= $e['id'] ?>">
-                                        <button type="submit" class="delete" style="border:none; background:transparent; cursor:pointer;" onclick="return confirm('Delete this?')">Delete</button>
+                                        <button type="submit" class="delete" onclick="return confirm('Delete this expense?')">Delete</button>
                                     </form>
                                 </td>
                                 <?php endif; ?>
@@ -265,6 +281,7 @@ $pending_count = count($invitations) + count($activities);
                         <?php endwhile; else: ?>
                             <tr><td colspan="<?= $is_editor ? '6' : '5' ?>" class="empty">No expenses recorded yet.</td></tr>
                         <?php endif; ?>
+                        </tbody>
                     </table>
                 </div>
             </div>
@@ -272,38 +289,38 @@ $pending_count = count($invitations) + count($activities);
             <!-- SCAN RECEIPT TAB -->
             <?php if($is_editor): ?>
             <div id="scanner" class="tab-content panel">
-                <div class="form-panel" style="max-width: 100%; margin: 0; padding: 10px; border:none; box-shadow:none;">
-                    <h2 style="margin-top: 0; margin-bottom: 8px;">Scan Workspace Receipt</h2>
-                    <p class="hint" style="margin-bottom: 24px;">Upload a receipt to automatically parse its details.</p>
-                    
-                    <label>Receipt Image
+                <div class="scan-body">
+                    <h2>Scan a workspace receipt</h2>
+                    <p class="hint">Upload a photo of a receipt and we'll fill in the expense for you.</p>
+
+                    <label>Receipt image
                         <input type="file" id="receipt" accept="image/*">
                     </label>
-                    <button class="btn" id="scanBtn" type="button" style="margin-top: 20px;">Extract Details</button>
-                    <div id="status" class="status" style="margin-top: 16px; margin-bottom: 10px;"></div>
-                    
-                    <details style="margin-top: 10px; color: var(--muted); font-size: 14px; cursor: pointer;">
-                        <summary>View Raw Scanned Text</summary>
-                        <textarea id="ocrText" rows="4" style="margin-top: 10px; width: 100%; border: 1px solid var(--border); border-radius: 8px; padding: 10px;" readonly></textarea>
+                    <button class="btn" id="scanBtn" type="button">Scan receipt</button>
+                    <div id="status" class="status"></div>
+
+                    <details>
+                        <summary>View raw scanned text</summary>
+                        <textarea id="ocrText" rows="4" readonly></textarea>
                     </details>
 
                     <!-- Pre-Filled Workspace Expense Modal (Opens Automatically After Scan) -->
                     <div id="parsedExpenseForm" class="modal-overlay" style="display: none;">
-                        <div class="modal-box" style="max-width: 480px; width: 100%; text-align: left;">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                                <h2 style="margin: 0;">Review & Save to Workspace</h2>
-                                <button type="button" onclick="document.getElementById('parsedExpenseForm').style.display='none'" style="background: transparent; border: none; font-size: 24px; line-height: 1; color: #94a3b8; cursor: pointer; padding: 0;">&times;</button>
+                        <div class="modal-box modal-wide" role="dialog" aria-modal="true" aria-labelledby="parsedTitleHeading">
+                            <div class="modal-head">
+                                <h2 id="parsedTitleHeading">Review and save to workspace</h2>
+                                <button type="button" class="modal-close" aria-label="Close" onclick="document.getElementById('parsedExpenseForm').style.display='none'">&times;</button>
                             </div>
 
-                            <form method="post" style="display: flex; flex-direction: column; gap: 16px;">
+                            <form method="post">
                                 <input type="hidden" name="action" value="add_expense">
-                                
-                                <label>Expense Title
-                                    <input id="parsedTitle" type="text" name="title" required placeholder="e.g. Server Hosting">
+
+                                <label>Title
+                                    <input id="parsedTitle" type="text" name="title" required placeholder="e.g. Server hosting">
                                 </label>
 
-                                <label>Amount
-                                    <input id="parsedAmount" type="number" step="0.01" name="amount" required placeholder="0.00">
+                                <label>Amount (₱)
+                                    <input id="parsedAmount" type="number" step="0.01" name="amount" required placeholder="0.00" inputmode="decimal">
                                 </label>
 
                                 <label>Category
@@ -318,7 +335,7 @@ $pending_count = count($invitations) + count($activities);
                                             <option>Business Insurance & Taxes</option>
                                             <option>Other</option>
                                         </select>
-                                        <button type="button" onclick="toggleCategoryType()" class="category-toggle-btn" title="Switch to Personal Categories">
+                                        <button type="button" onclick="toggleCategoryType()" class="category-toggle-btn" title="Switch to personal categories" aria-label="Switch to personal categories">
                                             <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>
                                         </button>
                                     </div>
@@ -328,9 +345,9 @@ $pending_count = count($invitations) + count($activities);
                                     <input id="parsedDate" type="date" name="expense_date" required>
                                 </label>
 
-                                <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 8px;">
-                                    <button type="submit" class="btn" style="width: 100%; margin: 0;">Save Expense</button>
-                                    <button type="button" class="btn btn-secondary" style="width: 100%; margin: 0;" onclick="document.getElementById('parsedExpenseForm').style.display='none'">Cancel</button>
+                                <div class="form-actions">
+                                    <button type="button" class="btn btn-secondary" onclick="document.getElementById('parsedExpenseForm').style.display='none'">Cancel</button>
+                                    <button type="submit" class="btn">Save expense</button>
                                 </div>
                             </form>
                         </div>
@@ -344,11 +361,11 @@ $pending_count = count($invitations) + count($activities);
                 <?php if($is_owner): ?>
                     <form method="post" class="inline-form invite-form">
                         <input type="hidden" name="action" value="invite">
-                        <label>Invite by Username<input type="text" name="username" required placeholder="Enter exact username"></label>
+                        <label>Invite by username<input type="text" name="username" required placeholder="Enter the exact username"></label>
                         <label>Role
                             <select name="role"><option value="editor">Editor</option><option value="viewer">Viewer</option></select>
                         </label>
-                        <button type="submit" class="btn">Send Invite</button>
+                        <button type="submit" class="btn">Send invite</button>
                     </form>
                 <?php endif; ?>
 
@@ -356,24 +373,24 @@ $pending_count = count($invitations) + count($activities);
                     <?php foreach($collaborators as$c): ?>
                         <div class="collab-row">
                             <div class="collab-info">
-                                <strong><?= htmlspecialchars($c['username']) ?></strong> 
-                                <span class="role-badge role-<?= strtolower($c['role']) ?>" style="font-size:10px; padding:2px 8px; margin-left:8px;"><?= ucfirst($c['role']) ?></span>
-                                <?php if($c['status'] == 'pending') echo "<span style='background:#fef08a; color:#854d0e; font-size:10px; padding:2px 8px; border-radius:12px; margin-left:8px;'>Pending</span>"; ?>
+                                <strong><?= htmlspecialchars($c['username']) ?></strong>
+                                <span class="role-badge sm role-<?= strtolower($c['role']) ?>"><?= ucfirst($c['role']) ?></span>
+                                <?php if($c['status'] == 'pending') echo '<span class="pending-badge">Pending</span>'; ?>
                             </div>
                             <?php if($is_owner && $c['user_id'] !=$user_id): ?>
-                                <div style="display:flex; gap:12px; align-items:center;">
-                                    <form method="post" style="display:flex; flex-direction:row; margin:0;">
+                                <div class="collab-actions">
+                                    <form method="post">
                                         <input type="hidden" name="target_user_id" value="<?= $c['user_id'] ?>">
                                         <input type="hidden" name="action" value="update_role">
-                                        <select name="new_role" onchange="this.form.submit()" style="padding: 6px 12px; height:auto;">
+                                        <select name="new_role" aria-label="Role for <?= htmlspecialchars($c['username']) ?>" onchange="this.form.submit()">
                                             <option value="editor" <?= $c['role']=='editor'?'selected':'' ?>>Editor</option>
                                             <option value="viewer" <?= $c['role']=='viewer'?'selected':'' ?>>Viewer</option>
                                         </select>
                                     </form>
-                                    <form method="post" style="margin:0; display:flex;">
+                                    <form method="post">
                                         <input type="hidden" name="target_user_id" value="<?= $c['user_id'] ?>">
                                         <input type="hidden" name="action" value="remove_user">
-                                        <button type="submit" class="delete" style="border:none; background:transparent; cursor:pointer;" onclick="return confirm('Remove this user?')">Remove</button>
+                                        <button type="submit" class="delete" onclick="return confirm('Remove this user?')">Remove</button>
                                     </form>
                                 </div>
                             <?php endif; ?>
@@ -387,38 +404,36 @@ $pending_count = count($invitations) + count($activities);
             <div id="settings" class="tab-content panel">
                 <form method="post" class="inline-form rename-form">
                     <input type="hidden" name="action" value="rename">
-                    <label>Workspace Name<input type="text" name="new_name" value="<?= htmlspecialchars($record['name']) ?>" required></label>
-                    <button type="submit" class="btn">Save Name</button>
+                    <label>Workspace name<input type="text" name="new_name" value="<?= htmlspecialchars($record['name']) ?>" required></label>
+                    <button type="submit" class="btn">Save name</button>
                 </form>
 
-                <hr style="border:0; border-top:1px solid var(--border); margin: 30px 0;">
-                
-                <h3 style="color: #dc2626; margin-top: 0; margin-bottom: 20px;">Danger Zone</h3>
-                
+                <h3 class="section-title">Danger zone</h3>
+
                 <div class="danger-grid">
                     <!-- Transfer Ownership Card -->
                     <div class="danger-card">
-                        <h4>Transfer Ownership</h4>
-                        <p>Give complete control of this workspace to another member. You will be demoted to an Editor.</p>
-                        <form id="transferForm" method="post" style="display:flex; flex-direction:column; gap:12px; margin:0;">
+                        <h4>Transfer ownership</h4>
+                        <p>Give complete control of this workspace to another member. You will become an editor.</p>
+                        <form id="transferForm" method="post">
                             <input type="hidden" name="action" value="transfer">
-                            <select name="new_owner_id" required style="border-color:#fca5a5;">
-                                <option value="">Select current collaborator...</option>
+                            <select name="new_owner_id" required aria-label="New owner">
+                                <option value="">Select a collaborator...</option>
                                 <?php foreach($collaborators as $c): if($c['user_id'] != $user_id &&$c['status'] == 'accepted'): ?>
                                     <option value="<?= $c['user_id'] ?>"><?= htmlspecialchars($c['username']) ?></option>
                                 <?php endif; endforeach; ?>
                             </select>
-                            <button type="button" class="btn btn-danger" onclick="confirmAction('transferForm', '<?= htmlspecialchars(addslashes($record['name'])) ?>', 'transfer ownership')">Transfer Ownership</button>
+                            <button type="button" class="btn btn-danger" onclick="confirmAction('transferForm', '<?= htmlspecialchars(addslashes($record['name'])) ?>', 'transfer ownership')">Transfer ownership</button>
                         </form>
                     </div>
 
                     <!-- Delete Workspace Card -->
                     <div class="danger-card">
-                        <h4>Delete Workspace</h4>
-                        <p>Permanently delete this workspace and all associated expense data. This action cannot be undone.</p>
-                        <form id="deleteForm" method="post" style="margin:0; margin-top:auto;">
+                        <h4>Delete workspace</h4>
+                        <p>Permanently delete this workspace and every expense in it. You can't undo this.</p>
+                        <form id="deleteForm" method="post">
                             <input type="hidden" name="action" value="delete_record">
-                            <button type="button" class="btn btn-danger" style="width:100%;" onclick="confirmAction('deleteForm', '<?= htmlspecialchars(addslashes($record['name'])) ?>', 'delete this workspace')">Delete Entire Workspace</button>
+                            <button type="button" class="btn btn-danger" onclick="confirmAction('deleteForm', '<?= htmlspecialchars(addslashes($record['name'])) ?>', 'delete this workspace')">Delete workspace</button>
                         </form>
                     </div>
                 </div>
@@ -427,97 +442,27 @@ $pending_count = count($invitations) + count($activities);
         </main>
     </div>
 
-    <!-- Logout Modal -->
-    <div id="logoutModal" class="modal-overlay" style="display: none;">
-        <div class="modal-box">
-            <h2>Ready to leave?</h2>
-            <p>Are you sure you want to log out of your account?</p>
+    <?php include __DIR__ . '/includes/modals.php'; ?>
+
+    <?php if($is_owner): ?>
+    <!-- Type-the-name confirmation for transfer / delete -->
+    <div id="typeConfirmModal" class="modal-overlay" style="display: none;">
+        <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="typeConfirmTitle">
+            <h2 id="typeConfirmTitle">Are you sure?</h2>
+            <p id="typeConfirmText"></p>
+            <label>Workspace name
+                <input type="text" id="typeConfirmInput" autocomplete="off" spellcheck="false">
+            </label>
             <div class="modal-actions">
-                <button class="btn btn-secondary" onclick="document.getElementById('logoutModal').style.display='none'">Cancel</button>
-                <a href="logout.php" class="btn btn-danger">Log Out</a>
+                <button type="button" class="btn btn-secondary" onclick="document.getElementById('typeConfirmModal').style.display='none'">Cancel</button>
+                <button type="button" class="btn btn-danger" id="typeConfirmBtn" disabled>Confirm</button>
             </div>
         </div>
     </div>
-
-    <!-- Notifications Modal (Priority Sorted) -->
-    <div id="notifModal" class="modal-overlay" style="display: none;">
-        <div class="modal-box" style="max-height: 85vh; overflow-y: auto;">
-            <h2>Notifications</h2>
-            
-            <!-- HIGH PRIORITY: Invites -->
-            <?php if(count($invitations) > 0): ?>
-                <h4 style="margin: 0 0 12px; color: #94a3b8; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;">Pending Invitations</h4>
-                <?php foreach($invitations as$n): ?>
-                    <div class="notif-item" style="border-left: 4px solid #3b82f6;">
-                        <div style="text-align: left;">
-                            <strong><?= htmlspecialchars($n['name']) ?></strong><br>
-                            <small>Role: <?= ucfirst($n['role']) ?></small>
-                        </div>
-                        <div class="notif-actions">
-                            <a href="notification-action.php?id=<?= $n['id'] ?>&action=accept" class="btn btn-success">Accept</a>
-                            <a href="notification-action.php?id=<?= $n['id'] ?>&action=deny" class="btn btn-danger">Deny</a>
-                        </div>
-                    </div>
-                <?php endforeach; ?>
-            <?php endif; ?>
-
-            <!-- LOWER PRIORITY: Recent Activity -->
-            <?php if(count($activities) > 0): ?>
-                <h4 style="margin: <?= count($invitations) > 0 ? '24px' : '0' ?> 0 12px; color: #94a3b8; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;">Recent Activity</h4>
-                <?php foreach($activities as$a): ?>
-                    <div class="notif-item">
-                        <div style="text-align: left;">
-                            <strong><?= htmlspecialchars($a['workspace_name']) ?></strong><br>
-                            <small><?= htmlspecialchars($a['message']) ?></small>
-                        </div>
-                        <div class="notif-actions">
-                            <a href="notification-action.php?act_id=<?= $a['id'] ?>&action=dismiss" class="btn btn-secondary" style="margin:0!important; padding: 6px 14px!important; font-size:12px!important; min-width:auto;">Dismiss</a>
-                        </div>
-                    </div>
-                <?php endforeach; ?>
-            <?php endif; ?>
-
-            <?php if($pending_count == 0): ?>
-                <div style="text-align: center; padding: 30px 0; color: #94a3b8;">
-                    <svg viewBox="0 0 24 24" width="48" height="48" stroke="currentColor" stroke-width="1" fill="none" style="margin-bottom: 12px; opacity: 0.5;">
-                        <path d="M22 17H2a3 3 0 0 0 3-3V9a7 7 0 0 1 14 0v5a3 3 0 0 0 3 3zm-8.27 4a2 2 0 0 1-3.46 0"></path>
-                    </svg>
-                    <p style="margin:0;">You're all caught up!</p>
-                </div>
-            <?php endif; ?>
-
-            <button class="btn btn-secondary mt-auto" style="width:100%; margin-top:24px!important;" onclick="document.getElementById('notifModal').style.display='none'">Close</button>
-        </div>
-    </div>
+    <?php endif; ?>
 
     <!-- Scanner Script Inclusion -->
     <script src="js/receipt-scanner.js"></script>
-
-    <!-- Real-Time Notification Polling script -->
-    <script>
-        setInterval(() => {
-            fetch('api/check-notifications.php')
-                .then(res => res.json())
-                .then(data => {
-                    const iconBtn = document.querySelector('.notif-icon-btn');
-                    let dot = document.querySelector('.notif-dot');
-                    
-                    if (data.count > 0) {
-                        if (!dot) {
-                            dot = document.createElement('span');
-                            dot.className = 'notif-dot';
-                            iconBtn.appendChild(dot);
-                        }
-                        // Update the number inside the red dot
-                        dot.textContent = data.count;
-                    } else if (dot) {
-                        // Remove dot if there are no notifications
-                        dot.remove();
-                    }
-                })
-                .catch(err => console.error('Polling error:', err));
-        }, 10000); // Quietly checks the database every 10 seconds
-    </script>
 
     <script>
         function openTab(tabId, btn) {
@@ -527,66 +472,75 @@ $pending_count = count($invitations) + count($activities);
             btn.classList.add('active');
         }
 
+        // Transfer / delete: the owner has to type the workspace name before the button unlocks.
+        let typeConfirmFormId = null;
+        let typeConfirmName = '';
         function confirmAction(formId, recordName, actionText) {
-            let input = prompt(`To ${actionText}, please type the workspace name exactly: "${recordName}"`);
-            if (input === recordName) {
-                document.getElementById(formId).submit();
-            } else if (input !== null) {
-                alert("The name did not match. Action cancelled.");
-            }
-        }
+            const modal = document.getElementById('typeConfirmModal');
+            const input = document.getElementById('typeConfirmInput');
+            const btn = document.getElementById('typeConfirmBtn');
+            const isDelete = actionText.indexOf('delete') === 0;
+            typeConfirmFormId = formId;
+            typeConfirmName = recordName;
 
-        // Initialize Workspace Doughnut Chart
+            document.getElementById('typeConfirmTitle').textContent = isDelete ? 'Delete this workspace?' : 'Transfer ownership?';
+            document.getElementById('typeConfirmText').textContent = 'To ' + actionText + ', type the workspace name exactly: ' + recordName;
+            btn.textContent = isDelete ? 'Delete workspace' : 'Transfer ownership';
+            input.value = '';
+            btn.disabled = true;
+            modal.style.display = 'flex';
+            setTimeout(() => input.focus(), 50);
+        }
+        document.addEventListener('DOMContentLoaded', function () {
+            const input = document.getElementById('typeConfirmInput');
+            const btn = document.getElementById('typeConfirmBtn');
+            if (!input || !btn) return;
+            input.addEventListener('input', () => { btn.disabled = input.value !== typeConfirmName; });
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') { e.preventDefault(); if (!btn.disabled) btn.click(); }
+            });
+            btn.addEventListener('click', () => {
+                if (input.value === typeConfirmName && typeConfirmFormId) {
+                    document.getElementById(typeConfirmFormId).submit();
+                }
+            });
+        });
+
+        // Workspace doughnut chart
         document.addEventListener("DOMContentLoaded", function() {
             const ctx = document.getElementById('sharedCategoryChart');
-            if (ctx && <?= $summary['count'] ?> > 0) {
-                const colors = ecxThemeColors();
-                const chart = new Chart(ctx, {
-                    type: 'doughnut',
-                    data: {
-                        labels: <?= json_encode($chart_labels) ?>,
-                        datasets: [{
-                            data: <?= json_encode($chart_values) ?>,
-                            backgroundColor: ecxChartColors(<?= count($chart_values) ?>),
-                            borderColor: colors.surface
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        plugins: { legend: { position: 'bottom', labels: { color: colors.text } } }
-                    }
-                });
-                // Re-color the chart when the light/dark toggle is used.
-                window.addEventListener('themechange', () => {
-                    const c = ecxThemeColors();
-                    chart.data.datasets[0].borderColor = c.surface;
-                    chart.options.plugins.legend.labels.color = c.text;
-                    chart.update();
-                });
+            if (ctx && <?= (int)$summary['count'] ?> > 0) {
+                ecxDoughnut(
+                    ctx,
+                    <?= json_encode($chart_labels) ?>,
+                    <?= json_encode($chart_values) ?>,
+                    document.getElementById('sharedCategoryLegend')
+                );
             }
         });
     </script>
     <script>
         const personalCategories = ["Housing & Living", "Utilities", "Food and Dining", "Transportation", "Health & Wellness", "Personal Care & Household", "Entertainment & Lifestyle", "Financial & Obligations", "Other"];
         const businessCategories = ["Operations & Office", "Cost of Goods Sold (COGS) / Inventory", "Marketing & Advertising", "Payroll & Contractor Fees", "Travel & Client Entertainment", "Professional Services & Legal", "Business Insurance & Taxes", "Other"];
-        
+
         const iconHouse = `<svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>`;
         const iconSuitcase = `<svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>`;
-        
+
         let isBusiness = true; // Starts in Business mode for collaborative workspaces
 
         function toggleCategoryType() {
             isBusiness = !isBusiness;
             const selects = document.querySelectorAll('.dynamic-category-select');
             const btns = document.querySelectorAll('.category-toggle-btn');
-            
+
             const options = isBusiness ? businessCategories : personalCategories;
             const optionsHTML = options.map(opt => `<option>${opt}</option>`).join('');
-            
+
             selects.forEach(select => select.innerHTML = optionsHTML);
             btns.forEach(btn => {
                 btn.innerHTML = isBusiness ? iconSuitcase : iconHouse;
-                btn.title = isBusiness ? "Switch to Personal Categories" : "Switch to Business Categories";
+                btn.title = isBusiness ? "Switch to personal categories" : "Switch to business categories";
+                btn.setAttribute('aria-label', btn.title);
             });
         }
     </script>

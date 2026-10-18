@@ -5,6 +5,11 @@ document.addEventListener("DOMContentLoaded", function () {
   const rawText = document.getElementById("ocrText");
   const parsedForm = document.getElementById("parsedExpenseForm");
 
+  function setStatus(message, state) {
+    statusDiv.textContent = message;
+    statusDiv.className = "status " + state;
+  }
+
   // Move the modal to root body so parent transforms never trap or misalign it
   if (parsedForm) {
     document.body.appendChild(parsedForm);
@@ -14,13 +19,11 @@ document.addEventListener("DOMContentLoaded", function () {
     scanBtn.addEventListener("click", function () {
       const file = fileInput.files[0];
       if (!file) {
-        statusDiv.innerHTML =
-          '<span style="color: #dc2626; font-weight: bold;">Please select a receipt image first.</span>';
+        setStatus("Select a receipt image first.", "is-error");
         return;
       }
 
-      statusDiv.innerHTML =
-        '<span style="color: #2563eb; font-weight: bold;">Analyzing receipt... Please wait.</span>';
+      setStatus("Reading your receipt...", "is-busy");
       if (rawText) rawText.value = "";
       if (parsedForm) parsedForm.style.display = "none"; // Hide modal while scanning
 
@@ -28,7 +31,7 @@ document.addEventListener("DOMContentLoaded", function () {
       Tesseract.recognize(file, "eng", {
         logger: (m) => {
           if (m.status === "recognizing text")
-            statusDiv.innerHTML = `<span style="color: #2563eb; font-weight:bold;">Scanning: ${Math.round(m.progress * 100)}%</span>`;
+            setStatus(`Scanning: ${Math.round(m.progress * 100)}%`, "is-busy");
         },
       })
         .then(({ data: { text } }) => {
@@ -37,13 +40,11 @@ document.addEventListener("DOMContentLoaded", function () {
           // Smart Parse the Text & Open Modal
           parseReceipt(text);
 
-          statusDiv.innerHTML =
-            '<span style="color: #10b981; font-weight: bold;">Scan complete! Review and save your expense in the pop-up.</span>';
+          setStatus("Scan complete. Review the details and save the expense.", "is-ok");
         })
         .catch((err) => {
           console.error(err);
-          statusDiv.innerHTML =
-            '<span style="color: #dc2626; font-weight: bold;">Error scanning receipt.</span>';
+          setStatus("We couldn't read that receipt. Try a clearer, well-lit photo.", "is-error");
         });
     });
   }
